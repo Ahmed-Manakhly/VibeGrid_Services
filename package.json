@@ -1,0 +1,22 @@
+{
+  "name": "vibegrid-services",
+  "version": "1.0.0",
+  "description": "Backend microservices and worker pool for VibeGrid distributed system architecture",
+  "private": true,
+  "scripts": {
+    "infra:up": "docker compose -f infrastructure/docker-compose.yml up -d",
+    "infra:down": "docker compose -f infrastructure/docker-compose.yml down",
+    "infra:logs": "docker compose -f infrastructure/docker-compose.yml logs -f",
+    "infra:ps": "docker compose -f infrastructure/docker-compose.yml ps"
+  },
+  "keywords": [
+    "vibegrid",
+    "microservices",
+    "rabbitmq",
+    "redis",
+    "mongodb",
+    "postgresql"
+  ],
+  "author": "",
+  "license": "ISC"
+}

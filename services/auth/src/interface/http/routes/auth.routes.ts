@@ -1,0 +1,20 @@
+import { Router } from 'express';
+import { AuthController } from '../controllers/AuthController';
+import { OAuthController } from '../controllers/OAuthController';
+
+export function createAuthRouter(authController: AuthController, oauthController: OAuthController): Router {
+  const router = Router();
+
+  router.post('/register', authController.register);
+  router.post('/login', authController.login);
+  router.post('/refresh', authController.refresh);
+  router.post('/logout', authController.logout);
+  router.get('/jwks.json', authController.getJwks);
+
+  router.get('/oauth/google', oauthController.googleLogin);
+  router.get('/oauth/google/callback', oauthController.googleCallback);
+  router.get('/oauth/github', oauthController.githubLogin);
+  router.get('/oauth/github/callback', oauthController.githubCallback);
+
+  return router;
+}
