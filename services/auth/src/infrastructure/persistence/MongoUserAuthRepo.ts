@@ -9,9 +9,11 @@ export class MongoUserAuthRepo implements IUserAuthRepository {
       email: doc.email,
       passwordHash: doc.passwordHash,
       name: doc.name,
-      provider: doc.provider,
+      provider: doc.provider as any,
       providerId: doc.providerId,
       role: doc.role,
+      isActive: doc.isActive,
+      passwordChangedAt: doc.passwordChangedAt,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt
     });

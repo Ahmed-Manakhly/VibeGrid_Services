@@ -20,6 +20,10 @@ export class AuthenticateUseCase {
       throw new Error('Invalid email or password');
     }
 
+    if (!user.isActive) {
+      throw new Error('Account is locked. Please contact support.');
+    }
+
     const isValid = await this.hasher.verify(dto.password, user.passwordHash);
     if (!isValid) {
       throw new Error('Invalid email or password');
