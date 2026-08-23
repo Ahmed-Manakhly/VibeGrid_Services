@@ -8,9 +8,12 @@ build/
 
 # Environment variables & secrets
 .env
-.env.local
-.env.production
+.env.*
+!.env.example
+**/secrets/
 secrets/
+*.key
+*.pem
 
 # IDE & Editor files
 .vscode/

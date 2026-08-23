@@ -1,0 +1,44 @@
+name: Deploy Auth Service
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'services/auth/**'
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Setup environment file
+        run: |
+          cp ~/vibegrid-backend/.env ./infrastructure/.env
+
+      - name: Setup secrets
+        run: |
+          cp -r ~/vibegrid-backend/secrets ./services/auth/secrets
+
+      - name: Load AppArmor profiles
+        run: |
+          sudo mkdir -p /etc/apparmor.d/
+          sudo cp infrastructure/apparmor/vibegrid-restrict-mongo /etc/apparmor.d/vibegrid-restrict-mongo
+          sudo cp infrastructure/apparmor/vibegrid-restrict-nginx /etc/apparmor.d/vibegrid-restrict-nginx
+          sudo apparmor_parser -r -W /etc/apparmor.d/vibegrid-restrict-mongo
+          sudo apparmor_parser -r -W /etc/apparmor.d/vibegrid-restrict-nginx
+
+      - name: Ensure Docker network exists
+        run: |
+          docker network inspect vibegrid_net >/dev/null 2>&1 || docker network create vibegrid_net
+
+      - name: Build and deploy Auth container
+        run: |
+          docker compose -f infrastructure/docker-compose.yml up -d --build vibegrid_auth
+
+      - name: System Cleanup
+        run: |
+          docker image prune -f

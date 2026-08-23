@@ -1,0 +1,38 @@
+name: Deploy Infrastructure
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'infrastructure/**'
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Setup environment file
+        run: |
+          cp ~/vibegrid-backend/.env ./infrastructure/.env
+
+      - name: Load AppArmor profiles
+        run: |
+          sudo mkdir -p /etc/apparmor.d/
+          sudo cp infrastructure/apparmor/vibegrid-restrict-mongo /etc/apparmor.d/vibegrid-restrict-mongo
+          sudo cp infrastructure/apparmor/vibegrid-restrict-redis /etc/apparmor.d/vibegrid-restrict-redis
+          sudo cp infrastructure/apparmor/vibegrid-restrict-nginx /etc/apparmor.d/vibegrid-restrict-nginx
+          sudo apparmor_parser -r -W /etc/apparmor.d/vibegrid-restrict-mongo
+          sudo apparmor_parser -r -W /etc/apparmor.d/vibegrid-restrict-redis
+          sudo apparmor_parser -r -W /etc/apparmor.d/vibegrid-restrict-nginx
+
+      - name: Build and deploy Infrastructure containers
+        run: |
+          bash infrastructure/deploy.sh
+
+      - name: System Cleanup
+        run: |
+          docker image prune -f

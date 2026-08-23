@@ -1,0 +1,56 @@
+#include <tunables/global>
+
+# MongoDB AppArmor Profile for VibeGrid
+profile vibegrid-restrict-mongo flags=(attach_disconnected, mediate_deleted) {
+    include <abstractions/base>
+    include <abstractions/nameservice>
+
+    # Allow binaries
+    /bin/** rix,
+    /usr/bin/** rix,
+    /usr/local/bin/** rix,
+    /sbin/** rix,
+    /usr/sbin/** rix,
+    /lib/** rm,
+    /usr/lib/** rm,
+    /usr/local/lib/** rm,
+    /lib64/** rm,
+
+    # Filesystem read/write for database data
+    /** rwmkl,
+    / rw,
+    / m,
+
+    # Shell interpreters
+    /bin/sh ix,
+    /bin/bash ix,
+    /bin/dash ix,
+
+    # Capabilities (except sys_admin)
+    capability,
+    deny capability sys_admin,
+
+    # Networking
+    network inet stream,
+    network inet6 stream,
+    network inet dgram,
+    network inet6 dgram,
+    network unix stream,
+    network unix dgram,
+
+    # Proc access
+    @{PROC}/** rw,
+    /sys/** r,
+
+    # Signals
+    signal,
+    ptrace,
+
+    # Mount
+    mount,
+    umount,
+
+    # Deny dangerous operations
+    deny @{PROC}/docker*/cmdline w,
+    deny @{PROC}/docker*/fd/** w,
+}
