@@ -23,10 +23,16 @@ import { ResetPasswordUseCase } from '../application/use-cases/ResetPassword.use
 import { ChangePasswordUseCase } from '../application/use-cases/ChangePassword.usecase';
 import { ValidateTokenGuardUseCase } from '../application/use-cases/ValidateTokenGuard.usecase';
 import { OAuthLoginUseCase } from '../application/use-cases/OAuthLogin.usecase';
+import { AdminCreateUserUseCase } from '../application/use-cases/AdminCreateUser.usecase';
+import { AdminGetUsersUseCase } from '../application/use-cases/AdminGetUsers.usecase';
+import { AdminGetUserByIdUseCase } from '../application/use-cases/AdminGetUserById.usecase';
+import { AdminUpdateUserUseCase } from '../application/use-cases/AdminUpdateUser.usecase';
 
 import { AuthController } from './http/controllers/AuthController';
 import { OAuthController } from './http/controllers/OAuthController';
+import { AdminUserController } from './http/controllers/AdminUserController';
 import { createAuthRouter } from './http/routes/auth.routes';
+import { createAdminRouter } from './http/routes/admin.routes';
 import { createProtectMiddleware } from './http/middleware/protect.middleware';
 
 dotenv.config();
@@ -126,7 +132,13 @@ async function bootstrap() {
     tokenSigner
   );
 
-  // Instantiate Controllers & Router
+  // Admin Use Cases
+  const adminCreateUserUseCase = new AdminCreateUserUseCase(userAuthRepo, hasher);
+  const adminGetUsersUseCase = new AdminGetUsersUseCase(userAuthRepo);
+  const adminGetUserByIdUseCase = new AdminGetUserByIdUseCase(userAuthRepo);
+  const adminUpdateUserUseCase = new AdminUpdateUserUseCase(userAuthRepo);
+
+  // Instantiate Controllers & Routers
   const authController = new AuthController(
     registerUserUseCase,
     authenticateUseCase,
@@ -138,9 +150,18 @@ async function bootstrap() {
     tokenSigner
   );
   const oauthController = new OAuthController(oauthLoginUseCase);
+  const adminUserController = new AdminUserController(
+    adminCreateUserUseCase,
+    adminGetUsersUseCase,
+    adminGetUserByIdUseCase,
+    adminUpdateUserUseCase
+  );
 
   const authRouter = createAuthRouter(authController, oauthController, protectMiddleware);
+  const adminRouter = createAdminRouter(adminUserController, protectMiddleware);
+
   app.use('/api/auth', authRouter);
+  app.use('/api/auth/admin', adminRouter);
 
   app.listen(PORT, () => {
     console.log(`🚀 Auth Microservice running on port ${PORT}`);
