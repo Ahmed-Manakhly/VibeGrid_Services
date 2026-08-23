@@ -24,6 +24,7 @@ export function createAuthRouter(
     router.get('/me', authController.getMe);
     router.patch('/me', authController.updateMe);
   }
+  router.get('/validate-token', authController.validateToken);
   router.get('/jwks.json', authController.getJwks);
 
   router.get('/oauth/google', oauthController.googleLogin);

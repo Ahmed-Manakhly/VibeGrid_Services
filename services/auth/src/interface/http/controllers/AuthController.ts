@@ -8,6 +8,7 @@ import { ResetPasswordUseCase } from '../../../application/use-cases/ResetPasswo
 import { ChangePasswordUseCase } from '../../../application/use-cases/ChangePassword.usecase';
 import { GetMeUseCase } from '../../../application/use-cases/GetMe.usecase';
 import { UpdateMeUseCase } from '../../../application/use-cases/UpdateMe.usecase';
+import { ValidateTokenGuardUseCase } from '../../../application/use-cases/ValidateTokenGuard.usecase';
 import { RS256TokenSigner } from '../../../infrastructure/security/RS256TokenSigner';
 
 export class AuthController {
@@ -21,6 +22,7 @@ export class AuthController {
     private changePasswordUseCase: ChangePasswordUseCase,
     private getMeUseCase: GetMeUseCase,
     private updateMeUseCase: UpdateMeUseCase,
+    private validateTokenGuardUseCase: ValidateTokenGuardUseCase,
     private tokenSigner: RS256TokenSigner
   ) {}
 
@@ -250,6 +252,38 @@ export class AuthController {
       });
     } catch (err: any) {
       res.status(400).json({ error: err.message });
+    }
+  };
+
+  validateToken = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const authHeader = req.headers.authorization;
+      const tokenFromHeader = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : undefined;
+      const token = tokenFromHeader || req.cookies?.access_token;
+
+      if (!token) {
+        res.status(401).json({ valid: false, error: 'No token provided' });
+        return;
+      }
+
+      const decoded = this.tokenSigner.verifyAccessToken(token);
+      const userId = decoded.sub || decoded.id;
+
+      await this.validateTokenGuardUseCase.execute({
+        token,
+        userId,
+        decodedRole: decoded.role,
+        tokenIat: decoded.iat
+      });
+
+      res.status(200).json({
+        valid: true,
+        userId,
+        email: decoded.email,
+        role: decoded.role
+      });
+    } catch (err: any) {
+      res.status(401).json({ valid: false, error: err.message || 'Invalid or revoked token' });
     }
   };
 

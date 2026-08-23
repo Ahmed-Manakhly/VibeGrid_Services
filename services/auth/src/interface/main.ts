@@ -154,6 +154,7 @@ async function bootstrap() {
     changePasswordUseCase,
     getMeUseCase,
     updateMeUseCase,
+    validateTokenGuardUseCase,
     tokenSigner
   );
   const oauthController = new OAuthController(oauthLoginUseCase);
