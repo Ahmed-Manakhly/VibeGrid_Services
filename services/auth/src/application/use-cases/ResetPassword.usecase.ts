@@ -64,8 +64,8 @@ export class ResetPasswordUseCase {
     const newPasswordHash = await this.passwordHasher.hash(input.newPassword);
     const now = new Date();
 
-    const updatedUser = user.updatePassword(newPasswordHash, now);
-    await this.userAuthRepo.update(updatedUser);
+    user.updatePassword(newPasswordHash, now);
+    await this.userAuthRepo.save(user);
 
     // 7. Clear used OTP token
     await this.emailTokenRepo.deleteByEmail(email);

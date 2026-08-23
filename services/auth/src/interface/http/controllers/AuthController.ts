@@ -5,6 +5,7 @@ import { RefreshTokenUseCase } from '../../../application/use-cases/RefreshToken
 import { RevokeTokenUseCase } from '../../../application/use-cases/RevokeToken.usecase';
 import { RequestPasswordResetUseCase } from '../../../application/use-cases/RequestPasswordReset.usecase';
 import { ResetPasswordUseCase } from '../../../application/use-cases/ResetPassword.usecase';
+import { ChangePasswordUseCase } from '../../../application/use-cases/ChangePassword.usecase';
 import { RS256TokenSigner } from '../../../infrastructure/security/RS256TokenSigner';
 
 export class AuthController {
@@ -15,6 +16,7 @@ export class AuthController {
     private revokeTokenUseCase: RevokeTokenUseCase,
     private requestPasswordResetUseCase: RequestPasswordResetUseCase,
     private resetPasswordUseCase: ResetPasswordUseCase,
+    private changePasswordUseCase: ChangePasswordUseCase,
     private tokenSigner: RS256TokenSigner
   ) {}
 
@@ -157,6 +159,39 @@ export class AuthController {
         confirmPassword
       });
       res.status(200).json(result);
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  };
+
+  changePassword = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = (req as any).user?.id || (req as any).user?.sub;
+      const { currentPassword, newPassword } = req.body;
+      const accessToken = req.cookies?.access_token || req.headers.authorization?.split(' ')[1];
+      const refreshToken = req.cookies?.refresh_token;
+
+      if (!userId) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+
+      if (!currentPassword || !newPassword) {
+        res.status(400).json({ error: 'Please provide currentPassword and newPassword' });
+        return;
+      }
+
+      await this.changePasswordUseCase.execute({
+        userId,
+        currentPassword,
+        newPassword,
+        accessToken,
+        refreshToken
+      });
+
+      res.clearCookie('access_token');
+      res.clearCookie('refresh_token');
+      res.status(200).json({ message: 'Password changed successfully. Please log in again with your new password.' });
     } catch (err: any) {
       res.status(400).json({ error: err.message });
     }

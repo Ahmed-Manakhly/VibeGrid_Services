@@ -20,11 +20,14 @@ import { RefreshTokenUseCase } from '../application/use-cases/RefreshToken.useca
 import { RevokeTokenUseCase } from '../application/use-cases/RevokeToken.usecase';
 import { RequestPasswordResetUseCase } from '../application/use-cases/RequestPasswordReset.usecase';
 import { ResetPasswordUseCase } from '../application/use-cases/ResetPassword.usecase';
+import { ChangePasswordUseCase } from '../application/use-cases/ChangePassword.usecase';
+import { ValidateTokenGuardUseCase } from '../application/use-cases/ValidateTokenGuard.usecase';
 import { OAuthLoginUseCase } from '../application/use-cases/OAuthLogin.usecase';
 
 import { AuthController } from './http/controllers/AuthController';
 import { OAuthController } from './http/controllers/OAuthController';
 import { createAuthRouter } from './http/routes/auth.routes';
+import { createProtectMiddleware } from './http/middleware/protect.middleware';
 
 dotenv.config();
 
@@ -103,6 +106,19 @@ async function bootstrap() {
     revokedTokenRepo
   );
 
+  const changePasswordUseCase = new ChangePasswordUseCase(
+    userAuthRepo,
+    hasher,
+    revokedTokenRepo
+  );
+
+  const validateTokenGuardUseCase = new ValidateTokenGuardUseCase(
+    userAuthRepo,
+    revokedTokenRepo
+  );
+
+  const protectMiddleware = createProtectMiddleware(validateTokenGuardUseCase, tokenSigner);
+
   const oauthLoginUseCase = new OAuthLoginUseCase(
     userAuthRepo,
     refreshTokenRepo,
@@ -118,11 +134,12 @@ async function bootstrap() {
     revokeTokenUseCase,
     requestPasswordResetUseCase,
     resetPasswordUseCase,
+    changePasswordUseCase,
     tokenSigner
   );
   const oauthController = new OAuthController(oauthLoginUseCase);
 
-  const authRouter = createAuthRouter(authController, oauthController);
+  const authRouter = createAuthRouter(authController, oauthController, protectMiddleware);
   app.use('/api/auth', authRouter);
 
   app.listen(PORT, () => {

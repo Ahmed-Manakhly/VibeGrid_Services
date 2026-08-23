@@ -75,12 +75,9 @@ export class UserAuth {
     return this.props.updatedAt || new Date();
   }
 
-  public updatePassword(newPasswordHash: string, changedAt: Date = new Date()): UserAuth {
-    return new UserAuth({
-      ...this.props,
-      passwordHash: newPasswordHash,
-      passwordChangedAt: changedAt,
-      updatedAt: new Date()
-    });
+  public updatePassword(newPasswordHash: string, changedAt: Date = new Date()): void {
+    this.props.passwordHash = newPasswordHash;
+    this.props.passwordChangedAt = changedAt;
+    this.props.updatedAt = new Date();
   }
 }
