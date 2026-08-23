@@ -5,4 +5,5 @@ export interface IUserAuthRepository {
   findById(id: string): Promise<UserAuth | null>;
   findByProvider(provider: string, providerId: string): Promise<UserAuth | null>;
   save(userAuth: UserAuth): Promise<UserAuth>;
+  update(userAuth: UserAuth): Promise<UserAuth>;
 }

@@ -35,30 +35,34 @@ export class MongoUserAuthRepo implements IUserAuthRepository {
   }
 
   async save(userAuth: UserAuth): Promise<UserAuth> {
-    if (userAuth.id) {
-      const doc = await UserAuthModel.findByIdAndUpdate(
-        userAuth.id,
-        {
-          email: userAuth.email,
-          passwordHash: userAuth.passwordHash,
-          name: userAuth.name,
-          provider: userAuth.provider,
-          providerId: userAuth.providerId,
-          role: userAuth.role
-        },
-        { new: true }
-      ).exec();
-      return this.toDomain(doc!);
-    } else {
-      const doc = await UserAuthModel.create({
+    const doc = await UserAuthModel.create({
+      email: userAuth.email,
+      passwordHash: userAuth.passwordHash,
+      name: userAuth.name,
+      provider: userAuth.provider,
+      providerId: userAuth.providerId,
+      role: userAuth.role,
+      isActive: userAuth.isActive,
+      passwordChangedAt: userAuth.passwordChangedAt
+    });
+    return this.toDomain(doc);
+  }
+
+  async update(userAuth: UserAuth): Promise<UserAuth> {
+    const doc = await UserAuthModel.findByIdAndUpdate(
+      userAuth.id,
+      {
         email: userAuth.email,
         passwordHash: userAuth.passwordHash,
         name: userAuth.name,
         provider: userAuth.provider,
         providerId: userAuth.providerId,
-        role: userAuth.role
-      });
-      return this.toDomain(doc);
-    }
+        role: userAuth.role,
+        isActive: userAuth.isActive,
+        passwordChangedAt: userAuth.passwordChangedAt
+      },
+      { new: true }
+    ).exec();
+    return this.toDomain(doc!);
   }
 }

@@ -8,6 +8,8 @@ import path from 'path';
 import { MongoUserAuthRepo } from '../infrastructure/persistence/MongoUserAuthRepo';
 import { MongoRefreshTokenRepo } from '../infrastructure/persistence/MongoRefreshTokenRepo';
 import { MongoRevokedTokenRepo } from '../infrastructure/persistence/MongoRevokedTokenRepo';
+import { MongoEmailTokenRepo } from '../infrastructure/persistence/MongoEmailTokenRepo';
+import { NodemailerEmailSender } from '../infrastructure/email/NodemailerEmailSender';
 import { Argon2Hasher } from '../infrastructure/security/Argon2Hasher';
 import { RS256TokenSigner } from '../infrastructure/security/RS256TokenSigner';
 import { RabbitMQPublisher } from '../infrastructure/messaging/RabbitMQPublisher';
@@ -16,6 +18,8 @@ import { RegisterUserUseCase } from '../application/use-cases/RegisterUser.useca
 import { AuthenticateUseCase } from '../application/use-cases/Authenticate.usecase';
 import { RefreshTokenUseCase } from '../application/use-cases/RefreshToken.usecase';
 import { RevokeTokenUseCase } from '../application/use-cases/RevokeToken.usecase';
+import { RequestPasswordResetUseCase } from '../application/use-cases/RequestPasswordReset.usecase';
+import { ResetPasswordUseCase } from '../application/use-cases/ResetPassword.usecase';
 import { OAuthLoginUseCase } from '../application/use-cases/OAuthLogin.usecase';
 
 import { AuthController } from './http/controllers/AuthController';
@@ -56,6 +60,8 @@ async function bootstrap() {
   const userAuthRepo = new MongoUserAuthRepo();
   const refreshTokenRepo = new MongoRefreshTokenRepo();
   const revokedTokenRepo = new MongoRevokedTokenRepo();
+  const emailTokenRepo = new MongoEmailTokenRepo();
+  const emailSender = new NodemailerEmailSender();
   const hasher = new Argon2Hasher();
   const tokenSigner = new RS256TokenSigner();
 
@@ -83,6 +89,20 @@ async function bootstrap() {
 
   const revokeTokenUseCase = new RevokeTokenUseCase(revokedTokenRepo);
 
+  const requestPasswordResetUseCase = new RequestPasswordResetUseCase(
+    userAuthRepo,
+    emailTokenRepo,
+    hasher,
+    emailSender
+  );
+
+  const resetPasswordUseCase = new ResetPasswordUseCase(
+    userAuthRepo,
+    emailTokenRepo,
+    hasher,
+    revokedTokenRepo
+  );
+
   const oauthLoginUseCase = new OAuthLoginUseCase(
     userAuthRepo,
     refreshTokenRepo,
@@ -96,6 +116,8 @@ async function bootstrap() {
     authenticateUseCase,
     refreshTokenUseCase,
     revokeTokenUseCase,
+    requestPasswordResetUseCase,
+    resetPasswordUseCase,
     tokenSigner
   );
   const oauthController = new OAuthController(oauthLoginUseCase);
