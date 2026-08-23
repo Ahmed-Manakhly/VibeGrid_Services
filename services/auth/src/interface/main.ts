@@ -7,6 +7,7 @@ import path from 'path';
 
 import { MongoUserAuthRepo } from '../infrastructure/persistence/MongoUserAuthRepo';
 import { MongoRefreshTokenRepo } from '../infrastructure/persistence/MongoRefreshTokenRepo';
+import { MongoRevokedTokenRepo } from '../infrastructure/persistence/MongoRevokedTokenRepo';
 import { Argon2Hasher } from '../infrastructure/security/Argon2Hasher';
 import { RS256TokenSigner } from '../infrastructure/security/RS256TokenSigner';
 import { RabbitMQPublisher } from '../infrastructure/messaging/RabbitMQPublisher';
@@ -14,6 +15,7 @@ import { RabbitMQPublisher } from '../infrastructure/messaging/RabbitMQPublisher
 import { RegisterUserUseCase } from '../application/use-cases/RegisterUser.usecase';
 import { AuthenticateUseCase } from '../application/use-cases/Authenticate.usecase';
 import { RefreshTokenUseCase } from '../application/use-cases/RefreshToken.usecase';
+import { RevokeTokenUseCase } from '../application/use-cases/RevokeToken.usecase';
 import { OAuthLoginUseCase } from '../application/use-cases/OAuthLogin.usecase';
 
 import { AuthController } from './http/controllers/AuthController';
@@ -53,6 +55,7 @@ async function bootstrap() {
   // Instantiate Repositories & Security Adapters
   const userAuthRepo = new MongoUserAuthRepo();
   const refreshTokenRepo = new MongoRefreshTokenRepo();
+  const revokedTokenRepo = new MongoRevokedTokenRepo();
   const hasher = new Argon2Hasher();
   const tokenSigner = new RS256TokenSigner();
 
@@ -78,6 +81,8 @@ async function bootstrap() {
     tokenSigner
   );
 
+  const revokeTokenUseCase = new RevokeTokenUseCase(revokedTokenRepo);
+
   const oauthLoginUseCase = new OAuthLoginUseCase(
     userAuthRepo,
     refreshTokenRepo,
@@ -90,6 +95,7 @@ async function bootstrap() {
     registerUserUseCase,
     authenticateUseCase,
     refreshTokenUseCase,
+    revokeTokenUseCase,
     tokenSigner
   );
   const oauthController = new OAuthController(oauthLoginUseCase);

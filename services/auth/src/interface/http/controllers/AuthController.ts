@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { RegisterUserUseCase } from '../../../application/use-cases/RegisterUser.usecase';
 import { AuthenticateUseCase } from '../../../application/use-cases/Authenticate.usecase';
 import { RefreshTokenUseCase } from '../../../application/use-cases/RefreshToken.usecase';
+import { RevokeTokenUseCase } from '../../../application/use-cases/RevokeToken.usecase';
 import { RS256TokenSigner } from '../../../infrastructure/security/RS256TokenSigner';
 
 export class AuthController {
@@ -9,6 +10,7 @@ export class AuthController {
     private registerUserUseCase: RegisterUserUseCase,
     private authenticateUseCase: AuthenticateUseCase,
     private refreshTokenUseCase: RefreshTokenUseCase,
+    private revokeTokenUseCase: RevokeTokenUseCase,
     private tokenSigner: RS256TokenSigner
   ) {}
 
@@ -93,6 +95,29 @@ export class AuthController {
   };
 
   logout = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const accessToken = req.cookies?.access_token;
+      const refreshToken = req.cookies?.refresh_token || req.body?.refreshToken;
+
+      if (accessToken) {
+        await this.revokeTokenUseCase.execute({
+          token: accessToken,
+          type: 'ACCESS',
+          expiresAt: new Date(Date.now() + 15 * 60 * 1000)
+        });
+      }
+
+      if (refreshToken) {
+        await this.revokeTokenUseCase.execute({
+          token: refreshToken,
+          type: 'REFRESH',
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        });
+      }
+    } catch (err) {
+      // Continue clearing cookies even if revocation recording fails
+    }
+
     res.clearCookie('access_token');
     res.clearCookie('refresh_token');
     res.status(200).json({ message: 'Logged out successfully' });

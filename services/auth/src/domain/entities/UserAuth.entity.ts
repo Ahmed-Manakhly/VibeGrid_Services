@@ -6,6 +6,8 @@ export interface UserAuthProps {
   provider?: 'local' | 'google' | 'github';
   providerId?: string;
   role?: string;
+  isActive?: boolean;
+  passwordChangedAt?: Date;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -18,6 +20,8 @@ export class UserAuth {
       ...props,
       provider: props.provider || 'local',
       role: props.role || 'USER',
+      isActive: props.isActive !== undefined ? props.isActive : true,
+      passwordChangedAt: props.passwordChangedAt,
       createdAt: props.createdAt || new Date(),
       updatedAt: props.updatedAt || new Date()
     };
@@ -53,6 +57,14 @@ export class UserAuth {
 
   public get role(): string {
     return this.props.role || 'USER';
+  }
+
+  public get isActive(): boolean {
+    return this.props.isActive !== undefined ? this.props.isActive : true;
+  }
+
+  public get passwordChangedAt(): Date | undefined {
+    return this.props.passwordChangedAt;
   }
 
   public get createdAt(): Date {
