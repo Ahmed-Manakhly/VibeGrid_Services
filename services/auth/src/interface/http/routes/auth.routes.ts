@@ -17,8 +17,12 @@ export function createAuthRouter(
   router.post('/reset-password', authController.resetPassword);
   if (protectMiddleware) {
     router.post('/change-password', protectMiddleware, authController.changePassword);
+    router.get('/me', protectMiddleware, authController.getMe);
+    router.patch('/me', protectMiddleware, authController.updateMe);
   } else {
     router.post('/change-password', authController.changePassword);
+    router.get('/me', authController.getMe);
+    router.patch('/me', authController.updateMe);
   }
   router.get('/jwks.json', authController.getJwks);
 

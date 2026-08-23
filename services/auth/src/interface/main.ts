@@ -21,6 +21,8 @@ import { RevokeTokenUseCase } from '../application/use-cases/RevokeToken.usecase
 import { RequestPasswordResetUseCase } from '../application/use-cases/RequestPasswordReset.usecase';
 import { ResetPasswordUseCase } from '../application/use-cases/ResetPassword.usecase';
 import { ChangePasswordUseCase } from '../application/use-cases/ChangePassword.usecase';
+import { GetMeUseCase } from '../application/use-cases/GetMe.usecase';
+import { UpdateMeUseCase } from '../application/use-cases/UpdateMe.usecase';
 import { ValidateTokenGuardUseCase } from '../application/use-cases/ValidateTokenGuard.usecase';
 import { OAuthLoginUseCase } from '../application/use-cases/OAuthLogin.usecase';
 import { AdminCreateUserUseCase } from '../application/use-cases/AdminCreateUser.usecase';
@@ -132,6 +134,9 @@ async function bootstrap() {
     tokenSigner
   );
 
+  const getMeUseCase = new GetMeUseCase(userAuthRepo);
+  const updateMeUseCase = new UpdateMeUseCase(userAuthRepo);
+
   // Admin Use Cases
   const adminCreateUserUseCase = new AdminCreateUserUseCase(userAuthRepo, hasher);
   const adminGetUsersUseCase = new AdminGetUsersUseCase(userAuthRepo);
@@ -147,6 +152,8 @@ async function bootstrap() {
     requestPasswordResetUseCase,
     resetPasswordUseCase,
     changePasswordUseCase,
+    getMeUseCase,
+    updateMeUseCase,
     tokenSigner
   );
   const oauthController = new OAuthController(oauthLoginUseCase);

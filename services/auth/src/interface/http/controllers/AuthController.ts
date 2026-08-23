@@ -6,6 +6,8 @@ import { RevokeTokenUseCase } from '../../../application/use-cases/RevokeToken.u
 import { RequestPasswordResetUseCase } from '../../../application/use-cases/RequestPasswordReset.usecase';
 import { ResetPasswordUseCase } from '../../../application/use-cases/ResetPassword.usecase';
 import { ChangePasswordUseCase } from '../../../application/use-cases/ChangePassword.usecase';
+import { GetMeUseCase } from '../../../application/use-cases/GetMe.usecase';
+import { UpdateMeUseCase } from '../../../application/use-cases/UpdateMe.usecase';
 import { RS256TokenSigner } from '../../../infrastructure/security/RS256TokenSigner';
 
 export class AuthController {
@@ -17,6 +19,8 @@ export class AuthController {
     private requestPasswordResetUseCase: RequestPasswordResetUseCase,
     private resetPasswordUseCase: ResetPasswordUseCase,
     private changePasswordUseCase: ChangePasswordUseCase,
+    private getMeUseCase: GetMeUseCase,
+    private updateMeUseCase: UpdateMeUseCase,
     private tokenSigner: RS256TokenSigner
   ) {}
 
@@ -192,6 +196,58 @@ export class AuthController {
       res.clearCookie('access_token');
       res.clearCookie('refresh_token');
       res.status(200).json({ message: 'Password changed successfully. Please log in again with your new password.' });
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  };
+
+  getMe = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = (req as any).user?.id || (req as any).user?.sub;
+      if (!userId) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+
+      const user = await this.getMeUseCase.execute(userId);
+      res.status(200).json({
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          provider: user.provider,
+          isActive: user.isActive,
+          createdAt: user.createdAt
+        }
+      });
+    } catch (err: any) {
+      res.status(404).json({ error: err.message });
+    }
+  };
+
+  updateMe = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = (req as any).user?.id || (req as any).user?.sub;
+      const { name } = req.body;
+
+      if (!userId) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+
+      const user = await this.updateMeUseCase.execute({ userId, name });
+      res.status(200).json({
+        message: 'Profile updated successfully',
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          provider: user.provider,
+          isActive: user.isActive
+        }
+      });
     } catch (err: any) {
       res.status(400).json({ error: err.message });
     }
