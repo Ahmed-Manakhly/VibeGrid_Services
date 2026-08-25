@@ -1,0 +1,231 @@
+{
+  "info": {
+    "_postman_id": "vibegrid-auth-service-v1",
+    "name": "VibeGrid — Auth Microservice",
+    "description": "Complete Postman collection for VibeGrid Auth Service (Express + RS256 JWT + MongoDB)\n\nBase URL (local native dev): http://localhost:3001\nBase URL (via API Gateway): http://localhost:8000\n\nAuth is cookie-based. After login, cookies are set automatically.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "BASE_URL", "value": "http://localhost:3001", "type": "string" },
+    { "key": "GATEWAY_URL", "value": "http://localhost:8000", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "📋 Auth — Public",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@vibegrid.com\",\n  \"password\": \"StrongP@ss1\",\n  \"name\": \"Test User\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/api/auth/register", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "register"] },
+            "description": "Register a new user. Returns access_token + refresh_token as HttpOnly cookies."
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@vibegrid.com\",\n  \"password\": \"StrongP@ss1\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/api/auth/login", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "login"] },
+            "description": "Login with credentials. Sets access_token + refresh_token cookies."
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{BASE_URL}}/api/auth/refresh", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "refresh"] },
+            "description": "Uses refresh_token cookie to issue a new access_token. Implements token rotation."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{BASE_URL}}/api/auth/logout", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "logout"] },
+            "description": "Clears cookies and adds both tokens to the revocation store."
+          }
+        },
+        {
+          "name": "Forgot Password (Request OTP)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@vibegrid.com\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/api/auth/forgot-password", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "forgot-password"] },
+            "description": "Sends a 6-digit OTP to the user's email address."
+          }
+        },
+        {
+          "name": "Reset Password (Verify OTP)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@vibegrid.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"NewStrongP@ss2\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/api/auth/reset-password", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "reset-password"] },
+            "description": "Verifies OTP and sets new password. Invalidates all existing tokens."
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔐 Auth — Protected (requires login cookie)",
+      "item": [
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"StrongP@ss1\",\n  \"newPassword\": \"NewStrongP@ss2\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/api/auth/change-password", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "change-password"] },
+            "description": "Changes password for authenticated user. Revokes all existing tokens → forces re-login."
+          }
+        },
+        {
+          "name": "Get Me (Profile)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{BASE_URL}}/api/auth/me", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "me"] },
+            "description": "Returns the authenticated user's profile."
+          }
+        },
+        {
+          "name": "Update Me (Profile)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/api/auth/me", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "me"] },
+            "description": "Updates the authenticated user's profile fields."
+          }
+        },
+        {
+          "name": "Validate Token (Internal / BFF)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{BASE_URL}}/api/auth/validate-token", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "validate-token"] },
+            "description": "Validates access_token cookie. Returns { valid, userId, email, role }. Used by Next.js BFF."
+          }
+        }
+      ]
+    },
+    {
+      "name": "👑 Admin — User Management (ADMIN role required)",
+      "item": [
+        {
+          "name": "Create User (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newuser@vibegrid.com\",\n  \"password\": \"AdminCreated@1\",\n  \"name\": \"New User\",\n  \"role\": \"USER\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/api/auth/admin/users", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "admin", "users"] },
+            "description": "Admin creates a new user with a specified role."
+          }
+        },
+        {
+          "name": "Get All Users (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/api/auth/admin/users?page=1&limit=20",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "auth", "admin", "users"],
+              "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }]
+            },
+            "description": "Returns a paginated list of all users."
+          }
+        },
+        {
+          "name": "Get User by ID (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{BASE_URL}}/api/auth/admin/users/:id", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "admin", "users", ":id"], "variable": [{ "key": "id", "value": "USER_MONGO_ID_HERE" }] },
+            "description": "Returns a specific user by MongoDB ID."
+          }
+        },
+        {
+          "name": "Update User (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\",\n  \"role\": \"ADMIN\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/api/auth/admin/users/:id", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "admin", "users", ":id"], "variable": [{ "key": "id", "value": "USER_MONGO_ID_HERE" }] },
+            "description": "Admin updates user name and/or role."
+          }
+        },
+        {
+          "name": "Toggle User Status (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": false\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/api/auth/admin/users/:id/status", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "admin", "users", ":id", "status"], "variable": [{ "key": "id", "value": "USER_MONGO_ID_HERE" }] },
+            "description": "Locks or unlocks a user account. Locked users cannot log in (isActive=false check)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "🌐 Via API Gateway (port 8000)",
+      "item": [
+        {
+          "name": "Gateway Health Check",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{GATEWAY_URL}}/health", "host": ["{{GATEWAY_URL}}"], "path": ["health"] },
+            "description": "Verify the Nginx API Gateway is healthy."
+          }
+        },
+        {
+          "name": "Login via Gateway",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@vibegrid.com\",\n  \"password\": \"StrongP@ss1\"\n}"
+            },
+            "url": { "raw": "{{GATEWAY_URL}}/api/auth/login", "host": ["{{GATEWAY_URL}}"], "path": ["api", "auth", "login"] },
+            "description": "Tests that the Nginx gateway correctly proxies to the Auth Service."
+          }
+        }
+      ]
+    }
+  ]
+}

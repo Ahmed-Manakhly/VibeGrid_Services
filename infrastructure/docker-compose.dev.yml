@@ -1,0 +1,44 @@
+# ─── DOCKER DEV COMPOSE ──────────────────────────────────────────────────────
+# Runs vibegrid_auth INSIDE Docker, pointing to container service names.
+# Used for integration testing and CI pre-production validation.
+# Usage: docker compose -f infrastructure/docker-compose.dev.yml up -d
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  vibegrid_auth_dev:
+    build:
+      context: ../services/auth
+      dockerfile: Dockerfile
+    container_name: vibegrid_auth_dev
+    restart: unless-stopped
+    environment:
+      PORT: 3001
+      NODE_ENV: docker_development
+      # Use container service names (not localhost) when running inside Docker
+      MONGO_URI: mongodb://admin:admin_secret@vibegrid_mongo:27017/auth_db?authSource=admin
+      RABBITMQ_URL: amqp://guest:guest@vibegrid_rabbitmq:5672
+      JWT_PRIVATE_KEY_PATH: /app/secrets/jwt.private.key
+      JWT_PUBLIC_KEY_PATH: /app/secrets/jwt.public.key
+      COOKIE_DOMAIN: localhost
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: 587
+      SMTP_USER: ${SMTP_USER:-your_email@gmail.com}
+      SMTP_PASS: ${SMTP_PASS:-your_app_password}
+      EMAIL_FROM: "VibeGrid <noreply@vibegrid.local>"
+    volumes:
+      # Mount secrets from local dev directory (gitignored)
+      - ../services/auth/secrets:/app/secrets:ro
+    ports:
+      - "3001:3001"
+    depends_on:
+      vibegrid_mongo:
+        condition: service_healthy
+      vibegrid_rabbitmq:
+        condition: service_healthy
+    networks:
+      - vibegrid_net
+
+networks:
+  vibegrid_net:
+    name: vibegrid_net
+    external: true
