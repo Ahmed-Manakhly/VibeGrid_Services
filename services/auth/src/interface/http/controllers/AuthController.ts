@@ -10,6 +10,7 @@ import { GetMeUseCase } from '../../../application/use-cases/GetMe.usecase';
 import { UpdateMeUseCase } from '../../../application/use-cases/UpdateMe.usecase';
 import { ValidateTokenGuardUseCase } from '../../../application/use-cases/ValidateTokenGuard.usecase';
 import { ITokenSigner } from '../../../domain/ports/ITokenSigner';
+import { ValidationError, UnauthorizedError } from '../../../application/errors/errors';
 
 export class AuthController {
   constructor(
@@ -48,61 +49,50 @@ export class AuthController {
   }
 
   register = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const { email, password, name } = req.body;
-      if (!email || !password) {
-        res.status(400).json({ error: 'Email and password are required' });
-        return;
-      }
-
-      const result = await this.registerUserUseCase.execute({ email, password, name });
-      this.setCookies(res, result.accessToken, result.refreshToken);
-
-      res.status(201).json({
-        message: 'User registered successfully',
-        user: result.user
-      });
-    } catch (err: any) {
-      res.status(400).json({ error: err.message });
+    const { email, password, name } = req.body;
+    if (!email || !password) {
+      throw new ValidationError('Email and password are required');
     }
+
+    const result = await this.registerUserUseCase.execute({ email, password, name });
+    this.setCookies(res, result.accessToken, result.refreshToken);
+
+    res.status(201).json({
+      message: 'User registered successfully',
+      user: result.user
+    });
   };
 
   login = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const { email, password } = req.body;
-      if (!email || !password) {
-        res.status(400).json({ error: 'Email and password are required' });
-        return;
-      }
-
-      const result = await this.authenticateUseCase.execute({ email, password });
-      this.setCookies(res, result.accessToken, result.refreshToken);
-
-      res.status(200).json({
-        message: 'Authenticated successfully',
-        user: result.user
-      });
-    } catch (err: any) {
-      res.status(401).json({ error: err.message });
+    const { email, password } = req.body;
+    if (!email || !password) {
+      throw new ValidationError('Email and password are required');
     }
+
+    const result = await this.authenticateUseCase.execute({ email, password });
+    this.setCookies(res, result.accessToken, result.refreshToken);
+
+    res.status(200).json({
+      message: 'Authenticated successfully',
+      user: result.user
+    });
   };
 
   refresh = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const refreshToken = req.cookies.refresh_token || req.body.refreshToken;
-      if (!refreshToken) {
-        res.status(401).json({ error: 'Refresh token missing' });
-        return;
-      }
+    const refreshToken = req.cookies?.refresh_token || req.body?.refreshToken;
+    if (!refreshToken) {
+      throw new UnauthorizedError('Refresh token missing');
+    }
 
+    try {
       const result = await this.refreshTokenUseCase.execute(refreshToken);
       this.setCookies(res, result.accessToken, result.refreshToken);
 
       res.status(200).json({ message: 'Token rotated successfully' });
-    } catch (err: any) {
+    } catch (err) {
       res.clearCookie('access_token');
       res.clearCookie('refresh_token');
-      res.status(401).json({ error: err.message });
+      throw err;
     }
   };
 
@@ -136,155 +126,124 @@ export class AuthController {
   };
 
   forgotPassword = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const { email } = req.body;
-      if (!email) {
-        res.status(400).json({ error: 'Please provide your email address' });
-        return;
-      }
-
-      const result = await this.requestPasswordResetUseCase.execute({ email });
-      res.status(200).json(result);
-    } catch (err: any) {
-      res.status(400).json({ error: err.message });
+    const { email } = req.body;
+    if (!email) {
+      throw new ValidationError('Please provide your email address');
     }
+
+    const result = await this.requestPasswordResetUseCase.execute({ email });
+    res.status(200).json(result);
   };
 
   resetPassword = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const { email, otp, newPassword, confirmPassword } = req.body;
-      if (!email || !otp || !newPassword || !confirmPassword) {
-        res.status(400).json({ error: 'Please provide email, OTP code, new password, and password confirmation' });
-        return;
-      }
-
-      const result = await this.resetPasswordUseCase.execute({
-        email,
-        otp,
-        newPassword,
-        confirmPassword
-      });
-      res.status(200).json(result);
-    } catch (err: any) {
-      res.status(400).json({ error: err.message });
+    const { email, otp, newPassword, confirmPassword } = req.body;
+    if (!email || !otp || !newPassword || !confirmPassword) {
+      throw new ValidationError('Please provide email, OTP code, new password, and password confirmation');
     }
+
+    const result = await this.resetPasswordUseCase.execute({
+      email,
+      otp,
+      newPassword,
+      confirmPassword
+    });
+    res.status(200).json(result);
   };
 
   changePassword = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const userId = (req as any).user?.id || (req as any).user?.sub;
-      const { currentPassword, newPassword } = req.body;
-      const accessToken = req.cookies?.access_token || req.headers.authorization?.split(' ')[1];
-      const refreshToken = req.cookies?.refresh_token;
+    const userId = (req as any).user?.id || (req as any).user?.sub;
+    const { currentPassword, newPassword } = req.body;
+    const accessToken = req.cookies?.access_token || req.headers.authorization?.split(' ')[1];
+    const refreshToken = req.cookies?.refresh_token;
 
-      if (!userId) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
-      }
-
-      if (!currentPassword || !newPassword) {
-        res.status(400).json({ error: 'Please provide currentPassword and newPassword' });
-        return;
-      }
-
-      await this.changePasswordUseCase.execute({
-        userId,
-        currentPassword,
-        newPassword,
-        accessToken,
-        refreshToken
-      });
-
-      res.clearCookie('access_token');
-      res.clearCookie('refresh_token');
-      res.status(200).json({ message: 'Password changed successfully. Please log in again with your new password.' });
-    } catch (err: any) {
-      res.status(400).json({ error: err.message });
+    if (!userId) {
+      throw new UnauthorizedError('Unauthorized');
     }
+
+    if (!currentPassword || !newPassword) {
+      throw new ValidationError('Please provide currentPassword and newPassword');
+    }
+
+    await this.changePasswordUseCase.execute({
+      userId,
+      currentPassword,
+      newPassword,
+      accessToken,
+      refreshToken
+    });
+
+    res.clearCookie('access_token');
+    res.clearCookie('refresh_token');
+    res.status(200).json({ message: 'Password changed successfully. Please log in again with your new password.' });
   };
 
   getMe = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const userId = (req as any).user?.id || (req as any).user?.sub;
-      if (!userId) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
-      }
-
-      const user = await this.getMeUseCase.execute(userId);
-      res.status(200).json({
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          provider: user.provider,
-          isActive: user.isActive,
-          createdAt: user.createdAt
-        }
-      });
-    } catch (err: any) {
-      res.status(404).json({ error: err.message });
+    const userId = (req as any).user?.id || (req as any).user?.sub;
+    if (!userId) {
+      throw new UnauthorizedError('Unauthorized');
     }
+
+    const user = await this.getMeUseCase.execute(userId);
+    res.status(200).json({
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        provider: user.provider,
+        isActive: user.isActive,
+        createdAt: user.createdAt
+      }
+    });
   };
 
   updateMe = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const userId = (req as any).user?.id || (req as any).user?.sub;
-      const { name } = req.body;
+    const userId = (req as any).user?.id || (req as any).user?.sub;
+    const { name } = req.body;
 
-      if (!userId) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
-      }
-
-      const user = await this.updateMeUseCase.execute({ userId, name });
-      res.status(200).json({
-        message: 'Profile updated successfully',
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          provider: user.provider,
-          isActive: user.isActive
-        }
-      });
-    } catch (err: any) {
-      res.status(400).json({ error: err.message });
+    if (!userId) {
+      throw new UnauthorizedError('Unauthorized');
     }
+
+    const user = await this.updateMeUseCase.execute({ userId, name });
+    res.status(200).json({
+      message: 'Profile updated successfully',
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        provider: user.provider,
+        isActive: user.isActive
+      }
+    });
   };
 
   validateToken = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const authHeader = req.headers.authorization;
-      const tokenFromHeader = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : undefined;
-      const token = tokenFromHeader || req.cookies?.access_token;
+    const authHeader = req.headers.authorization;
+    const tokenFromHeader = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : undefined;
+    const token = tokenFromHeader || req.cookies?.access_token;
 
-      if (!token) {
-        res.status(401).json({ valid: false, error: 'No token provided' });
-        return;
-      }
-
-      const decoded = this.tokenSigner.verifyAccessToken(token);
-      const userId = decoded.sub || decoded.id;
-
-      await this.validateTokenGuardUseCase.execute({
-        token,
-        userId,
-        decodedRole: decoded.role,
-        tokenIat: decoded.iat
-      });
-
-      res.status(200).json({
-        valid: true,
-        userId,
-        email: decoded.email,
-        role: decoded.role
-      });
-    } catch (err: any) {
-      res.status(401).json({ valid: false, error: err.message || 'Invalid or revoked token' });
+    if (!token) {
+      throw new UnauthorizedError('No token provided');
     }
+
+    const decoded = this.tokenSigner.verifyAccessToken(token);
+    const userId = decoded.sub || decoded.id;
+
+    await this.validateTokenGuardUseCase.execute({
+      token,
+      userId,
+      decodedRole: decoded.role,
+      tokenIat: decoded.iat
+    });
+
+    res.status(200).json({
+      valid: true,
+      userId,
+      email: decoded.email,
+      role: decoded.role
+    });
   };
 
   getJwks = async (req: Request, res: Response): Promise<void> => {

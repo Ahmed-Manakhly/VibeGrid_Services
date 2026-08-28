@@ -6,6 +6,8 @@ import { ITokenSigner } from '../../domain/ports/ITokenSigner';
 import { RefreshToken } from '../../domain/entities/RefreshToken.entity';
 import crypto from 'crypto';
 
+import { InvalidCredentialsError, AccountLockedError } from '../errors/errors';
+
 export class AuthenticateUseCase {
   constructor(
     private userAuthRepo: IUserAuthRepository,
@@ -17,16 +19,16 @@ export class AuthenticateUseCase {
   async execute(dto: LoginDTO): Promise<AuthTokensDTO> {
     const user = await this.userAuthRepo.findByEmail(dto.email);
     if (!user || !user.passwordHash) {
-      throw new Error('Invalid email or password');
+      throw new InvalidCredentialsError('Invalid email or password');
     }
 
     if (!user.isActive) {
-      throw new Error('Account is locked. Please contact support.');
+      throw new AccountLockedError('Account is locked. Please contact support.');
     }
 
     const isValid = await this.hasher.verify(dto.password, user.passwordHash);
     if (!isValid) {
-      throw new Error('Invalid email or password');
+      throw new InvalidCredentialsError('Invalid email or password');
     }
 
     const userId = user.id!;

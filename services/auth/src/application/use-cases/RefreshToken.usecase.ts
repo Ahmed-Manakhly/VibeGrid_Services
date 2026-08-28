@@ -4,6 +4,8 @@ import { ITokenSigner } from '../../domain/ports/ITokenSigner';
 import { RefreshToken } from '../../domain/entities/RefreshToken.entity';
 import crypto from 'crypto';
 
+import { UnauthorizedError, UserNotFoundError } from '../errors/errors';
+
 export class RefreshTokenUseCase {
   constructor(
     private refreshTokenRepo: IRefreshTokenRepo,
@@ -14,7 +16,7 @@ export class RefreshTokenUseCase {
   async execute(fullRefreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
     const parts = fullRefreshToken.split(':');
     if (parts.length !== 2) {
-      throw new Error('Invalid refresh token format');
+      throw new UnauthorizedError('Invalid refresh token format');
     }
 
     const [familyId, rawToken] = parts;
@@ -25,11 +27,11 @@ export class RefreshTokenUseCase {
     // Reuse detection: if token missing or revoked, revoke entire family
     if (!existingToken || existingToken.isRevoked) {
       await this.refreshTokenRepo.revokeFamily(familyId);
-      throw new Error('Refresh token reuse detected or token revoked');
+      throw new UnauthorizedError('Refresh token reuse detected or token revoked');
     }
 
     if (existingToken.expiresAt < new Date()) {
-      throw new Error('Refresh token expired');
+      throw new UnauthorizedError('Refresh token expired');
     }
 
     // Revoke old token
@@ -39,7 +41,7 @@ export class RefreshTokenUseCase {
     // Retrieve user for fresh claims
     const user = await this.userAuthRepo.findById(existingToken.userId);
     if (!user) {
-      throw new Error('User not found');
+      throw new UserNotFoundError('User not found');
     }
 
     // Issue new access token

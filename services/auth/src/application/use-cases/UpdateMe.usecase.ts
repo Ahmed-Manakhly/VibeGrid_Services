@@ -6,13 +6,15 @@ export interface UpdateMeInputDTO {
   name?: string;
 }
 
+import { UserNotFoundError } from '../errors/errors';
+
 export class UpdateMeUseCase {
   constructor(private userAuthRepo: IUserAuthRepository) {}
 
   public async execute(input: UpdateMeInputDTO): Promise<UserAuth> {
     const user = await this.userAuthRepo.findById(input.userId);
     if (!user) {
-      throw new Error('User profile not found');
+      throw new UserNotFoundError('User profile not found');
     }
 
     const updatedUser = UserAuth.create({

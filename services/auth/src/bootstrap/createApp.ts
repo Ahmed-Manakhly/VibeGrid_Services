@@ -1,10 +1,12 @@
-import express, { Express } from 'express';
+import express, { Express, Request, Response, NextFunction } from 'express';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import { ServiceContainer } from './container';
 import { createAuthRouter } from '../interface/http/routes/auth.routes';
 import { createAdminRouter } from '../interface/http/routes/admin.routes';
+import { globalErrorHandler } from '../interface/http/middleware/globalErrorHandler';
+import { NotFoundError } from '../application/errors/errors';
 
 export function createApp(container: ServiceContainer): Express {
   const app = express();
@@ -42,6 +44,14 @@ export function createApp(container: ServiceContainer): Express {
   // Mount Routers (Specific routes before generic)
   app.use('/api/auth/admin', adminRouter);
   app.use('/api/auth', authRouter);
+
+  // 404 Not Found Middleware - forwards typed NotFoundError
+  app.all('*', (req: Request, _res: Response, next: NextFunction) => {
+    next(new NotFoundError(`Route ${req.originalUrl} not found`));
+  });
+
+  // Global Error Handler (MUST be registered last)
+  app.use(globalErrorHandler);
 
   return app;
 }

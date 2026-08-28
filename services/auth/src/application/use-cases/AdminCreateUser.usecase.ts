@@ -11,6 +11,8 @@ export interface AdminCreateUserInputDTO {
   isActive?: boolean;
 }
 
+import { DuplicateEmailError, ValidationError } from '../errors/errors';
+
 export class AdminCreateUserUseCase {
   constructor(
     private userAuthRepo: IUserAuthRepository,
@@ -20,12 +22,12 @@ export class AdminCreateUserUseCase {
   public async execute(input: AdminCreateUserInputDTO): Promise<UserAuth> {
     const existing = await this.userAuthRepo.findByEmail(input.email);
     if (existing) {
-      throw new Error('User with this email already exists');
+      throw new DuplicateEmailError('User with this email already exists');
     }
 
     const validation = PasswordComplexityValidator.validate(input.password);
     if (!validation.isValid) {
-      throw new Error(validation.error || 'Password does not meet security criteria');
+      throw new ValidationError(validation.error || 'Password does not meet security criteria');
     }
 
     const passwordHash = await this.hasher.hash(input.password);

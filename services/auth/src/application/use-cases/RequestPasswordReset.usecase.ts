@@ -8,6 +8,8 @@ export interface RequestPasswordResetInput {
   email: string;
 }
 
+import { AccountLockedError, RateLimitError } from '../errors/errors';
+
 export class RequestPasswordResetUseCase {
   constructor(
     private userAuthRepo: IUserAuthRepository,
@@ -27,13 +29,13 @@ export class RequestPasswordResetUseCase {
     }
 
     if (!user.isActive) {
-      throw new Error('Account is locked. Please contact support.');
+      throw new AccountLockedError('Account is locked. Please contact support.');
     }
 
     // 2. Rate limit check: look for existing unexpired token
     const existingToken = await this.emailTokenRepo.findByEmail(email);
     if (existingToken && !existingToken.isExpired()) {
-      throw new Error('OTP request already sent. Please wait before requesting again.');
+      throw new RateLimitError('OTP request already sent. Please wait before requesting again.');
     }
 
     // 3. Generate 4-digit OTP

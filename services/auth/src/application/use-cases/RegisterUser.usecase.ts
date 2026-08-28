@@ -9,6 +9,8 @@ import { IRefreshTokenRepo } from '../../domain/ports/IRefreshTokenRepo';
 import { RefreshToken } from '../../domain/entities/RefreshToken.entity';
 import crypto from 'crypto';
 
+import { DuplicateEmailError } from '../errors/errors';
+
 export class RegisterUserUseCase {
   constructor(
     private userAuthRepo: IUserAuthRepository,
@@ -21,7 +23,7 @@ export class RegisterUserUseCase {
   async execute(dto: RegisterDTO): Promise<AuthTokensDTO> {
     const existing = await this.userAuthRepo.findByEmail(dto.email);
     if (existing) {
-      throw new Error('Email already registered');
+      throw new DuplicateEmailError('Email already registered');
     }
 
     const hashedPassword = await this.hasher.hash(dto.password);

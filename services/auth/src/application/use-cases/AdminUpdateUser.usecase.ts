@@ -8,13 +8,15 @@ export interface AdminUpdateUserInputDTO {
   isActive?: boolean;
 }
 
+import { UserNotFoundError } from '../errors/errors';
+
 export class AdminUpdateUserUseCase {
   constructor(private userAuthRepo: IUserAuthRepository) {}
 
   public async execute(input: AdminUpdateUserInputDTO): Promise<UserAuth> {
     const user = await this.userAuthRepo.findById(input.userId);
     if (!user) {
-      throw new Error('User not found');
+      throw new UserNotFoundError('User not found');
     }
 
     const updatedUser = UserAuth.create({

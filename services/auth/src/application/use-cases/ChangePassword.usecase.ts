@@ -14,6 +14,8 @@ export interface ChangePasswordInputDTO {
   refreshTokenExpiresAt?: Date;
 }
 
+import { UserNotFoundError, InvalidCredentialsError, ValidationError } from '../errors/errors';
+
 export class ChangePasswordUseCase {
   constructor(
     private userAuthRepo: IUserAuthRepository,
@@ -24,19 +26,19 @@ export class ChangePasswordUseCase {
   public async execute(input: ChangePasswordInputDTO): Promise<void> {
     const user = await this.userAuthRepo.findById(input.userId);
     if (!user || !user.passwordHash) {
-      throw new Error('User not found or using OAuth authentication');
+      throw new UserNotFoundError('User not found or using OAuth authentication');
     }
 
     // 1. Verify current password
     const isCurrentValid = await this.hasher.verify(input.currentPassword, user.passwordHash);
     if (!isCurrentValid) {
-      throw new Error('Current password is incorrect');
+      throw new InvalidCredentialsError('Current password is incorrect');
     }
 
     // 2. Validate new password complexity
     const validation = PasswordComplexityValidator.validate(input.newPassword);
     if (!validation.isValid) {
-      throw new Error(validation.error || 'New password does not meet security requirements');
+      throw new ValidationError(validation.error || 'New password does not meet security requirements');
     }
 
     // 3. Hash new password & update passwordChangedAt

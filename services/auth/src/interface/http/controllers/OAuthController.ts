@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { OAuthLoginUseCase } from '../../../application/use-cases/OAuthLogin.usecase';
+import { ValidationError } from '../../../application/errors/errors';
 
 export class OAuthController {
   constructor(private oauthLoginUseCase: OAuthLoginUseCase) {}
@@ -9,8 +10,7 @@ export class OAuthController {
     const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:8000/api/auth/oauth/google/callback';
 
     if (!clientId) {
-      res.status(500).json({ error: 'GOOGLE_CLIENT_ID not configured' });
-      return;
+      throw new Error('GOOGLE_CLIENT_ID not configured');
     }
 
     const url = `https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(
@@ -21,29 +21,24 @@ export class OAuthController {
   };
 
   googleCallback = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const { code } = req.query;
-      if (!code) {
-        res.status(400).json({ error: 'Missing code parameter' });
-        return;
-      }
-
-      // Simulating OAuth token exchange in local testing mode
-      const result = await this.oauthLoginUseCase.execute({
-        provider: 'google',
-        providerId: `google-user-${Date.now()}`,
-        email: `google.user.${Date.now()}@example.com`,
-        name: 'Google User'
-      });
-
-      const isProd = process.env.NODE_ENV === 'production';
-      res.cookie('access_token', result.accessToken, { httpOnly: true, secure: isProd });
-      res.cookie('refresh_token', result.refreshToken, { httpOnly: true, secure: isProd });
-
-      res.status(200).json({ message: 'Google OAuth login successful', user: result.user });
-    } catch (err: any) {
-      res.status(400).json({ error: err.message });
+    const { code } = req.query;
+    if (!code) {
+      throw new ValidationError('Missing code parameter');
     }
+
+    // Simulating OAuth token exchange in local testing mode
+    const result = await this.oauthLoginUseCase.execute({
+      provider: 'google',
+      providerId: `google-user-${Date.now()}`,
+      email: `google.user.${Date.now()}@example.com`,
+      name: 'Google User'
+    });
+
+    const isProd = process.env.NODE_ENV === 'production';
+    res.cookie('access_token', result.accessToken, { httpOnly: true, secure: isProd });
+    res.cookie('refresh_token', result.refreshToken, { httpOnly: true, secure: isProd });
+
+    res.status(200).json({ message: 'Google OAuth login successful', user: result.user });
   };
 
   githubLogin = (req: Request, res: Response): void => {
@@ -51,8 +46,7 @@ export class OAuthController {
     const redirectUri = process.env.GITHUB_REDIRECT_URI || 'http://localhost:8000/api/auth/oauth/github/callback';
 
     if (!clientId) {
-      res.status(500).json({ error: 'GITHUB_CLIENT_ID not configured' });
-      return;
+      throw new Error('GITHUB_CLIENT_ID not configured');
     }
 
     const url = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(
@@ -63,27 +57,22 @@ export class OAuthController {
   };
 
   githubCallback = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const { code } = req.query;
-      if (!code) {
-        res.status(400).json({ error: 'Missing code parameter' });
-        return;
-      }
-
-      const result = await this.oauthLoginUseCase.execute({
-        provider: 'github',
-        providerId: `github-user-${Date.now()}`,
-        email: `github.user.${Date.now()}@example.com`,
-        name: 'GitHub User'
-      });
-
-      const isProd = process.env.NODE_ENV === 'production';
-      res.cookie('access_token', result.accessToken, { httpOnly: true, secure: isProd });
-      res.cookie('refresh_token', result.refreshToken, { httpOnly: true, secure: isProd });
-
-      res.status(200).json({ message: 'GitHub OAuth login successful', user: result.user });
-    } catch (err: any) {
-      res.status(400).json({ error: err.message });
+    const { code } = req.query;
+    if (!code) {
+      throw new ValidationError('Missing code parameter');
     }
+
+    const result = await this.oauthLoginUseCase.execute({
+      provider: 'github',
+      providerId: `github-user-${Date.now()}`,
+      email: `github.user.${Date.now()}@example.com`,
+      name: 'GitHub User'
+    });
+
+    const isProd = process.env.NODE_ENV === 'production';
+    res.cookie('access_token', result.accessToken, { httpOnly: true, secure: isProd });
+    res.cookie('refresh_token', result.refreshToken, { httpOnly: true, secure: isProd });
+
+    res.status(200).json({ message: 'GitHub OAuth login successful', user: result.user });
   };
 }

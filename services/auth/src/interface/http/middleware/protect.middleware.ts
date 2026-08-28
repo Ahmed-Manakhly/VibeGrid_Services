@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ValidateTokenGuardUseCase } from '../../../application/use-cases/ValidateTokenGuard.usecase';
 import { ITokenSigner } from '../../../domain/ports/ITokenSigner';
+import { UnauthorizedError } from '../../../application/errors/errors';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -18,14 +19,12 @@ export function createProtectMiddleware(
     try {
       const token = req.cookies?.access_token || req.headers.authorization?.split(' ')[1];
       if (!token) {
-        res.status(401).json({ error: 'Authentication required' });
-        return;
+        return next(new UnauthorizedError('Authentication required'));
       }
 
       const decoded = tokenSigner.verifyAccessToken(token);
       if (!decoded || !decoded.sub) {
-        res.status(401).json({ error: 'Invalid or expired token' });
-        return;
+        return next(new UnauthorizedError('Invalid or expired token'));
       }
 
       const guardResult = await validateTokenGuard.execute({
@@ -38,8 +37,7 @@ export function createProtectMiddleware(
       if (!guardResult.isValid) {
         res.clearCookie('access_token');
         res.clearCookie('refresh_token');
-        res.status(401).json({ error: guardResult.reason });
-        return;
+        return next(new UnauthorizedError(guardResult.reason || 'Invalid or revoked token'));
       }
 
       req.user = {
@@ -50,7 +48,7 @@ export function createProtectMiddleware(
 
       next();
     } catch (err: any) {
-      res.status(401).json({ error: 'Authentication failed' });
+      return next(new UnauthorizedError('Authentication failed'));
     }
   };
 }
