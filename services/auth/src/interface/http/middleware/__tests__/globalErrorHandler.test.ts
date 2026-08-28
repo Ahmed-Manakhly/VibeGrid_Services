@@ -143,3 +143,41 @@ describe('asyncHandler Utility', () => {
     expect(mockNext).toHaveBeenCalledWith(expect.any(ValidationError));
   });
 });
+
+describe('End-to-End Async Error Propagation Chain', () => {
+  it('should propagate a rejected use case error through controller & asyncHandler to globalErrorHandler producing expected HTTP status and JSON', async () => {
+    // 1. Mock Use Case rejecting with typed domain error
+    const mockUseCase = {
+      execute: jest.fn().mockRejectedValue(new InvalidCredentialsError('Invalid email or password'))
+    };
+
+    // 2. Controller method invoking use case
+    class TestController {
+      login = async (req: Request, res: Response): Promise<void> => {
+        await mockUseCase.execute(req.body);
+        res.status(200).json({ ok: true });
+      };
+    }
+
+    const controller = new TestController();
+    const mockReq = { body: { email: 'user@example.com', password: 'wrong' } } as Request;
+    const mockRes = createMockRes();
+
+    // 3. asyncHandler wrapping the controller action
+    const wrappedRoute = asyncHandler(controller.login);
+
+    // 4. Await asynchronous promise resolution through asyncHandler to globalErrorHandler
+    await new Promise<void>((resolve) => {
+      const handleNext = (err: any) => {
+        globalErrorHandler(err, mockReq, mockRes as Response, jest.fn());
+        resolve();
+      };
+      wrappedRoute(mockReq, mockRes as Response, handleNext);
+    });
+
+    // 5. Assert complete chain results in HTTP 401 with safe client JSON message
+    expect(mockUseCase.execute).toHaveBeenCalledWith(mockReq.body);
+    expect(mockRes.status).toHaveBeenCalledWith(401);
+    expect(mockRes.json).toHaveBeenCalledWith({ error: 'Invalid email or password' });
+  });
+});

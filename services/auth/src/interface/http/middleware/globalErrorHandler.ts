@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import {
-  ApplicationError,
   InvalidCredentialsError,
   UserNotFoundError,
   AccountLockedError,
@@ -63,15 +62,7 @@ export function globalErrorHandler(
     statusCode = 400;
     clientMessage = err.message || 'Database validation failed';
   }
-  // 4. Custom status attached to error object
-  else if (typeof err?.status === 'number') {
-    statusCode = err.status;
-    clientMessage = err.message;
-  } else if (typeof err?.statusCode === 'number') {
-    statusCode = err.statusCode;
-    clientMessage = err.message;
-  }
-  // 5. Fallback generic handling
+  // 4. Fallback generic handling for unexpected errors
   else {
     statusCode = 500;
     const isProd = process.env.NODE_ENV === 'production';
