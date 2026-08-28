@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ValidateTokenGuardUseCase } from '../../../application/use-cases/ValidateTokenGuard.usecase';
-import { RS256TokenSigner } from '../../../infrastructure/security/RS256TokenSigner';
+import { ITokenSigner } from '../../../domain/ports/ITokenSigner';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -12,7 +12,7 @@ export interface AuthenticatedRequest extends Request {
 
 export function createProtectMiddleware(
   validateTokenGuard: ValidateTokenGuardUseCase,
-  tokenSigner: RS256TokenSigner
+  tokenSigner: ITokenSigner
 ) {
   return async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {

@@ -9,7 +9,7 @@ import { ChangePasswordUseCase } from '../../../application/use-cases/ChangePass
 import { GetMeUseCase } from '../../../application/use-cases/GetMe.usecase';
 import { UpdateMeUseCase } from '../../../application/use-cases/UpdateMe.usecase';
 import { ValidateTokenGuardUseCase } from '../../../application/use-cases/ValidateTokenGuard.usecase';
-import { RS256TokenSigner } from '../../../infrastructure/security/RS256TokenSigner';
+import { ITokenSigner } from '../../../domain/ports/ITokenSigner';
 
 export class AuthController {
   constructor(
@@ -23,7 +23,7 @@ export class AuthController {
     private getMeUseCase: GetMeUseCase,
     private updateMeUseCase: UpdateMeUseCase,
     private validateTokenGuardUseCase: ValidateTokenGuardUseCase,
-    private tokenSigner: RS256TokenSigner
+    private tokenSigner: ITokenSigner
   ) {}
 
   private setCookies(res: Response, accessToken: string, refreshToken: string): void {

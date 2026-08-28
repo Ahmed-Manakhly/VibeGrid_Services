@@ -1,6 +1,6 @@
 import { IRefreshTokenRepo } from '../../domain/ports/IRefreshTokenRepo';
 import { IUserAuthRepository } from '../../domain/ports/IUserAuthRepository';
-import { RS256TokenSigner } from '../../infrastructure/security/RS256TokenSigner';
+import { ITokenSigner } from '../../domain/ports/ITokenSigner';
 import { RefreshToken } from '../../domain/entities/RefreshToken.entity';
 import crypto from 'crypto';
 
@@ -8,7 +8,7 @@ export class RefreshTokenUseCase {
   constructor(
     private refreshTokenRepo: IRefreshTokenRepo,
     private userAuthRepo: IUserAuthRepository,
-    private tokenSigner: RS256TokenSigner
+    private tokenSigner: ITokenSigner
   ) {}
 
   async execute(fullRefreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {

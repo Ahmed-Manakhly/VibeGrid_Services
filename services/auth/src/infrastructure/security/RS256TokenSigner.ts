@@ -2,7 +2,9 @@ import jwt from 'jsonwebtoken';
 import fs from 'fs';
 import path from 'path';
 
-export class RS256TokenSigner {
+import { ITokenSigner } from '../../domain/ports/ITokenSigner';
+
+export class RS256TokenSigner implements ITokenSigner {
   private privateKey: string;
   private publicKey: string;
 

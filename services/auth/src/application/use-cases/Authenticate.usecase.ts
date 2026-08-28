@@ -2,7 +2,7 @@ import { IUserAuthRepository } from '../../domain/ports/IUserAuthRepository';
 import { IPasswordHasher } from '../../domain/ports/IPasswordHasher';
 import { IRefreshTokenRepo } from '../../domain/ports/IRefreshTokenRepo';
 import { LoginDTO, AuthTokensDTO } from '../dtos/auth.dtos';
-import { RS256TokenSigner } from '../../infrastructure/security/RS256TokenSigner';
+import { ITokenSigner } from '../../domain/ports/ITokenSigner';
 import { RefreshToken } from '../../domain/entities/RefreshToken.entity';
 import crypto from 'crypto';
 
@@ -11,7 +11,7 @@ export class AuthenticateUseCase {
     private userAuthRepo: IUserAuthRepository,
     private refreshTokenRepo: IRefreshTokenRepo,
     private hasher: IPasswordHasher,
-    private tokenSigner: RS256TokenSigner
+    private tokenSigner: ITokenSigner
   ) {}
 
   async execute(dto: LoginDTO): Promise<AuthTokensDTO> {

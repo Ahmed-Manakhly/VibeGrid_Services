@@ -4,7 +4,7 @@ import { IEventPublisher } from '../../domain/ports/IEventPublisher';
 import { UserAuth } from '../../domain/entities/UserAuth.entity';
 import { UserRegisteredEvent } from '../../domain/events/UserRegistered.event';
 import { RegisterDTO, AuthTokensDTO } from '../dtos/auth.dtos';
-import { RS256TokenSigner } from '../../infrastructure/security/RS256TokenSigner';
+import { ITokenSigner } from '../../domain/ports/ITokenSigner';
 import { IRefreshTokenRepo } from '../../domain/ports/IRefreshTokenRepo';
 import { RefreshToken } from '../../domain/entities/RefreshToken.entity';
 import crypto from 'crypto';
@@ -15,7 +15,7 @@ export class RegisterUserUseCase {
     private refreshTokenRepo: IRefreshTokenRepo,
     private hasher: IPasswordHasher,
     private eventPublisher: IEventPublisher,
-    private tokenSigner: RS256TokenSigner
+    private tokenSigner: ITokenSigner
   ) {}
 
   async execute(dto: RegisterDTO): Promise<AuthTokensDTO> {

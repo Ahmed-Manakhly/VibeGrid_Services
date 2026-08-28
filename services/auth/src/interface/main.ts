@@ -1,179 +1,92 @@
-import express from 'express';
-import cookieParser from 'cookie-parser';
-import cors from 'cors';
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-import path from 'path';
-
-import { MongoUserAuthRepo } from '../infrastructure/persistence/MongoUserAuthRepo';
-import { MongoRefreshTokenRepo } from '../infrastructure/persistence/MongoRefreshTokenRepo';
-import { MongoRevokedTokenRepo } from '../infrastructure/persistence/MongoRevokedTokenRepo';
-import { MongoEmailTokenRepo } from '../infrastructure/persistence/MongoEmailTokenRepo';
-import { NodemailerEmailSender } from '../infrastructure/email/NodemailerEmailSender';
-import { Argon2Hasher } from '../infrastructure/security/Argon2Hasher';
-import { RS256TokenSigner } from '../infrastructure/security/RS256TokenSigner';
+import { Server } from 'http';
+import { loadAndValidateConfig } from '../config/env';
 import { RabbitMQPublisher } from '../infrastructure/messaging/RabbitMQPublisher';
-
-import { RegisterUserUseCase } from '../application/use-cases/RegisterUser.usecase';
-import { AuthenticateUseCase } from '../application/use-cases/Authenticate.usecase';
-import { RefreshTokenUseCase } from '../application/use-cases/RefreshToken.usecase';
-import { RevokeTokenUseCase } from '../application/use-cases/RevokeToken.usecase';
-import { RequestPasswordResetUseCase } from '../application/use-cases/RequestPasswordReset.usecase';
-import { ResetPasswordUseCase } from '../application/use-cases/ResetPassword.usecase';
-import { ChangePasswordUseCase } from '../application/use-cases/ChangePassword.usecase';
-import { GetMeUseCase } from '../application/use-cases/GetMe.usecase';
-import { UpdateMeUseCase } from '../application/use-cases/UpdateMe.usecase';
-import { ValidateTokenGuardUseCase } from '../application/use-cases/ValidateTokenGuard.usecase';
-import { OAuthLoginUseCase } from '../application/use-cases/OAuthLogin.usecase';
-import { AdminCreateUserUseCase } from '../application/use-cases/AdminCreateUser.usecase';
-import { AdminGetUsersUseCase } from '../application/use-cases/AdminGetUsers.usecase';
-import { AdminGetUserByIdUseCase } from '../application/use-cases/AdminGetUserById.usecase';
-import { AdminUpdateUserUseCase } from '../application/use-cases/AdminUpdateUser.usecase';
-
-import { AuthController } from './http/controllers/AuthController';
-import { OAuthController } from './http/controllers/OAuthController';
-import { AdminUserController } from './http/controllers/AdminUserController';
-import { createAuthRouter } from './http/routes/auth.routes';
-import { createAdminRouter } from './http/routes/admin.routes';
-import { createProtectMiddleware } from './http/middleware/protect.middleware';
-
-dotenv.config();
-
-const PORT = process.env.PORT || 3001;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://vibegrid_mongo:27017/auth_db';
-const RABBIT_URL = process.env.RABBITMQ_URL || 'amqp://vibegrid_rabbitmq:5672';
+import { createContainer } from '../bootstrap/container';
+import { createApp } from '../bootstrap/createApp';
+import { ensureBootstrapUsers } from '../bootstrap/ensureBootstrapUsers';
 
 async function bootstrap() {
-  const app = express();
+  // 1. Load and validate environment configuration (Fail-fast)
+  const config = loadAndValidateConfig();
+  console.log(`[Auth Service] Starting in ${config.nodeEnv} mode...`);
 
-  app.use(express.json());
-  app.use(cookieParser());
-  app.use(cors({ origin: true, credentials: true }));
-
-  // Health check endpoint
-  app.get('/health', (req, res) => {
-    res.status(200).json({ status: 'ok', service: 'auth-microservice' });
-  });
-
-  // Connect MongoDB
+  // 2. Connect MongoDB (Fail-fast on error)
   try {
-    await mongoose.connect(MONGO_URI);
-    console.log('✅ Auth Service connected to MongoDB at:', MONGO_URI);
-  } catch (err) {
-    console.error('❌ Failed to connect to MongoDB:', err);
+    await mongoose.connect(config.mongoUri);
+    console.log('✅ Auth Service connected to MongoDB database');
+  } catch (err: any) {
+    console.error('❌ Fatal error: Failed to connect to MongoDB:', err.message);
+    process.exit(1);
   }
 
-  // Connect RabbitMQ
-  const eventPublisher = new RabbitMQPublisher(RABBIT_URL);
-  await eventPublisher.connect();
+  // 3. Connect RabbitMQ Event Publisher
+  const eventPublisher = new RabbitMQPublisher(config.rabbitmqUrl);
+  try {
+    await eventPublisher.connect();
+    console.log('✅ Auth Service connected to RabbitMQ broker');
+  } catch (err: any) {
+    console.warn('⚠️ Warning: RabbitMQ connection unavailable:', err.message);
+  }
 
-  // Instantiate Repositories & Security Adapters
-  const userAuthRepo = new MongoUserAuthRepo();
-  const refreshTokenRepo = new MongoRefreshTokenRepo();
-  const revokedTokenRepo = new MongoRevokedTokenRepo();
-  const emailTokenRepo = new MongoEmailTokenRepo();
-  const emailSender = new NodemailerEmailSender();
-  const hasher = new Argon2Hasher();
-  const tokenSigner = new RS256TokenSigner();
+  // 4. Create Composition Container & Dependency Graph
+  const container = createContainer(config, eventPublisher);
 
-  // Instantiate Use Cases
-  const registerUserUseCase = new RegisterUserUseCase(
-    userAuthRepo,
-    refreshTokenRepo,
-    hasher,
-    eventPublisher,
-    tokenSigner
-  );
+  // 5. Seed Bootstrap Dev/Admin Users (if configured)
+  await ensureBootstrapUsers(config, container.userAuthRepo, container.adminCreateUserUseCase);
 
-  const authenticateUseCase = new AuthenticateUseCase(
-    userAuthRepo,
-    refreshTokenRepo,
-    hasher,
-    tokenSigner
-  );
+  // 6. Create Express Application
+  const app = createApp(container);
 
-  const refreshTokenUseCase = new RefreshTokenUseCase(
-    refreshTokenRepo,
-    userAuthRepo,
-    tokenSigner
-  );
-
-  const revokeTokenUseCase = new RevokeTokenUseCase(revokedTokenRepo);
-
-  const requestPasswordResetUseCase = new RequestPasswordResetUseCase(
-    userAuthRepo,
-    emailTokenRepo,
-    hasher,
-    emailSender
-  );
-
-  const resetPasswordUseCase = new ResetPasswordUseCase(
-    userAuthRepo,
-    emailTokenRepo,
-    hasher,
-    revokedTokenRepo
-  );
-
-  const changePasswordUseCase = new ChangePasswordUseCase(
-    userAuthRepo,
-    hasher,
-    revokedTokenRepo
-  );
-
-  const validateTokenGuardUseCase = new ValidateTokenGuardUseCase(
-    userAuthRepo,
-    revokedTokenRepo
-  );
-
-  const protectMiddleware = createProtectMiddleware(validateTokenGuardUseCase, tokenSigner);
-
-  const oauthLoginUseCase = new OAuthLoginUseCase(
-    userAuthRepo,
-    refreshTokenRepo,
-    eventPublisher,
-    tokenSigner
-  );
-
-  const getMeUseCase = new GetMeUseCase(userAuthRepo);
-  const updateMeUseCase = new UpdateMeUseCase(userAuthRepo);
-
-  // Admin Use Cases
-  const adminCreateUserUseCase = new AdminCreateUserUseCase(userAuthRepo, hasher);
-  const adminGetUsersUseCase = new AdminGetUsersUseCase(userAuthRepo);
-  const adminGetUserByIdUseCase = new AdminGetUserByIdUseCase(userAuthRepo);
-  const adminUpdateUserUseCase = new AdminUpdateUserUseCase(userAuthRepo);
-
-  // Instantiate Controllers & Routers
-  const authController = new AuthController(
-    registerUserUseCase,
-    authenticateUseCase,
-    refreshTokenUseCase,
-    revokeTokenUseCase,
-    requestPasswordResetUseCase,
-    resetPasswordUseCase,
-    changePasswordUseCase,
-    getMeUseCase,
-    updateMeUseCase,
-    validateTokenGuardUseCase,
-    tokenSigner
-  );
-  const oauthController = new OAuthController(oauthLoginUseCase);
-  const adminUserController = new AdminUserController(
-    adminCreateUserUseCase,
-    adminGetUsersUseCase,
-    adminGetUserByIdUseCase,
-    adminUpdateUserUseCase
-  );
-
-  const authRouter = createAuthRouter(authController, oauthController, protectMiddleware);
-  const adminRouter = createAdminRouter(adminUserController, protectMiddleware);
-
-  app.use('/api/auth', authRouter);
-  app.use('/api/auth/admin', adminRouter);
-
-  app.listen(PORT, () => {
-    console.log(`🚀 Auth Microservice running on port ${PORT}`);
+  // 7. Start HTTP Server
+  const server: Server = app.listen(config.port, () => {
+    console.log(`🚀 Auth Microservice running on port ${config.port}`);
+    console.log(`   Liveness:  http://localhost:${config.port}/health`);
+    console.log(`   Readiness: http://localhost:${config.port}/ready`);
   });
+
+  // 8. Idempotent Graceful Shutdown Lifecycle
+  let isShuttingDown = false;
+
+  const shutdown = async (signal: string) => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+
+    console.log(`\n[Auth Service] Received ${signal}. Initiating graceful shutdown...`);
+
+    // Step A: Stop accepting new HTTP requests
+    server.close(async () => {
+      console.log('  [Shutdown] HTTP server closed.');
+
+      // Step B: Disconnect RabbitMQ Event Publisher
+      try {
+        await eventPublisher.disconnect();
+        console.log('  [Shutdown] RabbitMQ disconnected.');
+      } catch (err) {
+        // Ignore or log shutdown error
+      }
+
+      // Step C: Disconnect MongoDB Mongoose Connection
+      try {
+        await mongoose.disconnect();
+        console.log('  [Shutdown] MongoDB connection closed.');
+      } catch (err) {
+        // Ignore or log shutdown error
+      }
+
+      console.log('[Auth Service] Graceful shutdown completed cleanly. Exiting.');
+      process.exit(0);
+    });
+
+    // Fallback force exit timeout after 10 seconds
+    setTimeout(() => {
+      console.error('[Auth Service] Shutdown timed out. Forcing process exit.');
+      process.exit(1);
+    }, 10000);
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
 bootstrap().catch((err) => {
