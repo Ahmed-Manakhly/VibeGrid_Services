@@ -25,7 +25,7 @@ export class AuthController {
     private updateMeUseCase: UpdateMeUseCase,
     private validateTokenGuardUseCase: ValidateTokenGuardUseCase,
     private tokenSigner: ITokenSigner
-  ) {}
+  ) { }
 
   private setCookies(res: Response, accessToken: string, refreshToken: string): void {
     const isProd = process.env.NODE_ENV === 'production';
