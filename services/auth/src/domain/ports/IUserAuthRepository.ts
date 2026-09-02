@@ -28,6 +28,7 @@ export interface IUserAuthRepository {
   findByEmail(email: string): Promise<UserAuth | null>;
   findById(id: string): Promise<UserAuth | null>;
   findByProvider(provider: string, providerId: string): Promise<UserAuth | null>;
+  findFirstByRole(role: string): Promise<UserAuth | null>;
   findAll(query?: FindAllUsersQuery): Promise<PaginatedUsersResult>;
   save(userAuth: UserAuth): Promise<UserAuth>;
   update(userAuth: UserAuth): Promise<UserAuth>;

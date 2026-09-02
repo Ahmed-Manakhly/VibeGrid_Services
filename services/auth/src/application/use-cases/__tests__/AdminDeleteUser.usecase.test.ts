@@ -15,6 +15,7 @@ describe('AdminDeleteUserUseCase — Soft Delete', () => {
       findByEmail: jest.fn(),
       findById: jest.fn(),
       findByProvider: jest.fn(),
+      findFirstByRole: jest.fn(),
       findAll: jest.fn(),
       save: jest.fn().mockImplementation(async (user: UserAuth) => user),
       update: jest.fn()

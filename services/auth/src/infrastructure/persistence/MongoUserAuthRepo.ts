@@ -39,6 +39,11 @@ export class MongoUserAuthRepo implements IUserAuthRepository {
     return doc ? this.toDomain(doc) : null;
   }
 
+  async findFirstByRole(role: string): Promise<UserAuth | null> {
+    const doc = await UserAuthModel.findOne({ role }).exec();
+    return doc ? this.toDomain(doc) : null;
+  }
+
   async findAll(query?: FindAllUsersQuery): Promise<PaginatedUsersResult> {
     const page = Math.max(1, query?.page || 1);
     const limit = Math.max(1, Math.min(100, query?.limit || 20));

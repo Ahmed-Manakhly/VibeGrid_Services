@@ -19,6 +19,7 @@ describe('RequestPasswordResetUseCase — CSPRNG OTP Generation', () => {
       findByEmail: jest.fn(),
       findById: jest.fn(),
       findByProvider: jest.fn(),
+      findFirstByRole: jest.fn(),
       findAll: jest.fn(),
       save: jest.fn(),
       update: jest.fn()

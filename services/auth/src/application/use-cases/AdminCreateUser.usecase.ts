@@ -10,6 +10,7 @@ export interface AdminCreateUserInputDTO {
   name?: string;
   role?: string;
   isActive?: boolean;
+  isEmailVerified?: boolean;
 }
 
 import { DuplicateEmailError, ValidationError } from '../errors/errors';
@@ -50,6 +51,7 @@ export class AdminCreateUserUseCase {
       name: input.name,
       role: input.role || 'USER',
       isActive: input.isActive !== undefined ? input.isActive : true,
+      isEmailVerified: input.isEmailVerified !== undefined ? input.isEmailVerified : false,
       provider: 'local'
     });
 

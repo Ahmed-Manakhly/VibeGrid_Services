@@ -1,114 +1,386 @@
 {
   "info": {
-    "_postman_id": "vibegrid-auth-service-v1",
+    "_postman_id": "vibegrid-auth-service-v2",
     "name": "VibeGrid — Auth Microservice",
-    "description": "Complete Postman collection for VibeGrid Auth Service (Express + RS256 JWT + MongoDB)\n\nBase URL (local native dev): http://localhost:3001\nBase URL (via API Gateway): http://localhost:8000\n\nAuth is cookie-based. After login, cookies are set automatically.",
+    "description": "Complete Postman collection for VibeGrid Auth Service.\n\n✅ Single-file import — all variables are embedded as collection variables.\n✅ Cookies (access_token, refresh_token) are managed automatically via Postman Cookie Jar.\n✅ Test scripts auto-save userId, email, and OTP for chained requests.\n\n📌 Prerequisites:\n  1. Run infrastructure DBs:  cd infrastructure && bash start-db-only.dev.sh\n  2. Run auth service:        cd services/auth && npm run dev\n  3. Import this file into Postman and run requests in order.\n\nBase URL (local dev): http://localhost:8001",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "BASE_URL", "value": "http://localhost:3001", "type": "string" },
-    { "key": "GATEWAY_URL", "value": "http://localhost:8000", "type": "string" }
+    { "key": "BASE_URL",         "value": "http://localhost:8001",         "type": "string", "description": "Auth service direct URL for local native dev" },
+    { "key": "GATEWAY_URL",      "value": "http://localhost:8000",         "type": "string", "description": "Nginx API Gateway URL" },
+    { "key": "ADMIN_EMAIL",      "value": "admin@vibegrid.local",        "type": "string", "description": "Bootstrap admin account (created at service startup)" },
+    { "key": "ADMIN_PASSWORD",   "value": "V1b3Gr1d_Adm!n2026",           "type": "string", "description": "Bootstrap admin password" },
+    { "key": "TEST_EMAIL",       "value": "portfolio.tester@vibegrid.com", "type": "string", "description": "Test user email — change freely" },
+    { "key": "TEST_PASSWORD",    "value": "TestP@ss2026!",                 "type": "string", "description": "Test user password" },
+    { "key": "currentUserId",    "value": "",                              "type": "string", "description": "Auto-set by Register or Login test script" },
+    { "key": "currentUserEmail", "value": "",                              "type": "string", "description": "Auto-set by Register or Login test script" },
+    { "key": "currentOtp",       "value": "",                              "type": "string", "description": "Manually paste OTP received in email before calling Verify Email / Reset Password" }
   ],
   "item": [
     {
-      "name": "📋 Auth — Public",
+      "name": "🏥 Health",
       "item": [
         {
-          "name": "Register",
+          "name": "Liveness Check",
           "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"test@vibegrid.com\",\n  \"password\": \"StrongP@ss1\",\n  \"name\": \"Test User\"\n}"
-            },
-            "url": { "raw": "{{BASE_URL}}/api/auth/register", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "register"] },
-            "description": "Register a new user. Returns access_token + refresh_token as HttpOnly cookies."
-          }
+            "method": "GET",
+            "url": { "raw": "{{BASE_URL}}/health", "host": ["{{BASE_URL}}"], "path": ["health"] },
+            "description": "Verifies the service process is alive."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status is ok', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.eql('ok');",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "Login",
+          "name": "Readiness Check",
           "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"test@vibegrid.com\",\n  \"password\": \"StrongP@ss1\"\n}"
-            },
-            "url": { "raw": "{{BASE_URL}}/api/auth/login", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "login"] },
-            "description": "Login with credentials. Sets access_token + refresh_token cookies."
-          }
-        },
-        {
-          "name": "Refresh Token",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": { "raw": "{{BASE_URL}}/api/auth/refresh", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "refresh"] },
-            "description": "Uses refresh_token cookie to issue a new access_token. Implements token rotation."
-          }
-        },
-        {
-          "name": "Logout",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": { "raw": "{{BASE_URL}}/api/auth/logout", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "logout"] },
-            "description": "Clears cookies and adds both tokens to the revocation store."
-          }
-        },
-        {
-          "name": "Forgot Password (Request OTP)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"test@vibegrid.com\"\n}"
-            },
-            "url": { "raw": "{{BASE_URL}}/api/auth/forgot-password", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "forgot-password"] },
-            "description": "Sends a 6-digit OTP to the user's email address."
-          }
-        },
-        {
-          "name": "Reset Password (Verify OTP)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"test@vibegrid.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"NewStrongP@ss2\"\n}"
-            },
-            "url": { "raw": "{{BASE_URL}}/api/auth/reset-password", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "reset-password"] },
-            "description": "Verifies OTP and sets new password. Invalidates all existing tokens."
-          }
+            "method": "GET",
+            "url": { "raw": "{{BASE_URL}}/ready", "host": ["{{BASE_URL}}"], "path": ["ready"] },
+            "description": "Verifies the service is connected to MongoDB."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Database connected', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.eql('ready');",
+                  "  pm.expect(body.database).to.eql('connected');",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
     {
-      "name": "🔐 Auth — Protected (requires login cookie)",
+      "name": "📋 Auth — Public",
       "item": [
         {
-          "name": "Change Password",
+          "name": "1. Register (New User)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"currentPassword\": \"StrongP@ss1\",\n  \"newPassword\": \"NewStrongP@ss2\"\n}"
+              "raw": "{\n  \"email\": \"{{TEST_EMAIL}}\",\n  \"name\": \"Portfolio Tester\",\n  \"password\": \"{{TEST_PASSWORD}}\",\n  \"passwordConfirm\": \"{{TEST_PASSWORD}}\"\n}"
             },
-            "url": { "raw": "{{BASE_URL}}/api/auth/change-password", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "change-password"] },
-            "description": "Changes password for authenticated user. Revokes all existing tokens → forces re-login."
-          }
+            "url": { "raw": "{{BASE_URL}}/api/auth/register", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "register"] },
+            "description": "Register a new user. Auto-saves userId and email as collection variables."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has user object', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('user');",
+                  "  pm.expect(body.user).to.have.property('id');",
+                  "  pm.expect(body.user).to.have.property('email');",
+                  "  pm.collectionVariables.set('currentUserId', body.user.id);",
+                  "  pm.collectionVariables.set('currentUserEmail', body.user.email);",
+                  "  console.log('Saved userId:', body.user.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
+        {
+          "name": "2. Login (Test User)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{TEST_EMAIL}}\",\n  \"password\": \"{{TEST_PASSWORD}}\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/api/auth/login", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "login"] },
+            "description": "Login with test user credentials. Sets HttpOnly access_token + refresh_token cookies automatically via Postman Cookie Jar."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has user', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('user');",
+                  "  if (body.user && body.user.id) {",
+                  "    pm.collectionVariables.set('currentUserId', body.user.id);",
+                  "    pm.collectionVariables.set('currentUserEmail', body.user.email);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2b. Login (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{ADMIN_EMAIL}}\",\n  \"password\": \"{{ADMIN_PASSWORD}}\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/api/auth/login", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "login"] },
+            "description": "Login as bootstrap admin. Required before running any /admin/ endpoints."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Admin logged in', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.user.role).to.eql('ADMIN');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Send Email Verification OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{TEST_EMAIL}}\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/api/auth/create-email-token", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "create-email-token"] },
+            "description": "Sends a 6-digit OTP to the email for verification. ⚠️ After running, paste OTP from inbox into the 'currentOtp' collection variable before calling Verify Email."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Message confirms OTP sent', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. Verify Email (paste OTP into currentOtp variable first)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{TEST_EMAIL}}\",\n  \"otp\": \"{{currentOtp}}\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/api/auth/verify-email", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "verify-email"] },
+            "description": "Verifies the email with the OTP. Before running: paste the OTP from your inbox into the 'currentOtp' collection variable."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Email verified', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{BASE_URL}}/api/auth/refresh", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "refresh"] },
+            "description": "Uses refresh_token cookie to rotate tokens. Returns new access_token + refresh_token cookies."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6. Forgot Password — Request OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{TEST_EMAIL}}\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/api/auth/forgot-password", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "forgot-password"] },
+            "description": "Sends a 4-digit OTP for password reset. ⚠️ After running, paste OTP from inbox into the 'currentOtp' collection variable."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Message present', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7. Forgot Password — Reset with OTP",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{TEST_EMAIL}}\",\n  \"otp\": \"{{currentOtp}}\",\n  \"newPassword\": \"ResetP@ss2026!\",\n  \"confirmPassword\": \"ResetP@ss2026!\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/api/auth/reset-password", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "reset-password"] },
+            "description": "Resets password using the OTP from email. After this, log in again with the new password."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Password reset confirmed', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8. Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{BASE_URL}}/api/auth/logout", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "logout"] },
+            "description": "Clears HttpOnly cookies and revokes both tokens in the DB."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validate Token (Internal / BFF use)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{BASE_URL}}/api/auth/validate-token", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "validate-token"] },
+            "description": "Validates the access_token cookie. Returns { userId, email, role }. Used by the Next.js BFF gateway."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns user role', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('role');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "JWKS Public Key",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{BASE_URL}}/api/auth/jwks.json", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "jwks.json"] },
+            "description": "Returns the RS256 public key in JWKS format. Used by other services to verify JWT signatures."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns JWKS keys array', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('keys');",
+                  "  pm.expect(body.keys).to.be.an('array').with.length.greaterThan(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "👤 Auth — Protected (requires login cookie)",
+      "description": "⚠️ Run '2. Login (Test User)' first so Postman has a valid access_token cookie.",
+      "item": [
         {
           "name": "Get Me (Profile)",
           "request": {
             "method": "GET",
             "header": [],
             "url": { "raw": "{{BASE_URL}}/api/auth/me", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "me"] },
-            "description": "Returns the authenticated user's profile."
-          }
+            "description": "Returns the authenticated user's profile. Requires access_token cookie."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has user data', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('user');",
+                  "  pm.expect(body.user).to.have.property('email');",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Update Me (Profile)",
@@ -117,41 +389,57 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Updated Name\"\n}"
+              "raw": "{\n  \"name\": \"Updated Portfolio Name\"\n}"
             },
             "url": { "raw": "{{BASE_URL}}/api/auth/me", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "me"] },
-            "description": "Updates the authenticated user's profile fields."
-          }
+            "description": "Updates the authenticated user's profile. Requires access_token cookie."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "Validate Token (Internal / BFF)",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": { "raw": "{{BASE_URL}}/api/auth/validate-token", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "validate-token"] },
-            "description": "Validates access_token cookie. Returns { valid, userId, email, role }. Used by Next.js BFF."
-          }
-        }
-      ]
-    },
-    {
-      "name": "👑 Admin — User Management (ADMIN role required)",
-      "item": [
-        {
-          "name": "Create User (Admin)",
+          "name": "Change Password (Logged-in)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"newuser@vibegrid.com\",\n  \"password\": \"AdminCreated@1\",\n  \"name\": \"New User\",\n  \"role\": \"USER\"\n}"
+              "raw": "{\n  \"currentPassword\": \"{{TEST_PASSWORD}}\",\n  \"newPassword\": \"ChangedP@ss2026!\",\n  \"passwordConfirm\": \"ChangedP@ss2026!\"\n}"
             },
-            "url": { "raw": "{{BASE_URL}}/api/auth/admin/users", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "admin", "users"] },
-            "description": "Admin creates a new user with a specified role."
-          }
-        },
+            "url": { "raw": "{{BASE_URL}}/api/auth/change-password", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "change-password"] },
+            "description": "Changes password for the currently authenticated user. Revokes all existing tokens — you must log in again after this."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Password changed message', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "👑 Admin — User Management",
+      "description": "⚠️ Run '2b. Login (Admin)' first. All endpoints require ADMIN or SUPER_ADMIN role.",
+      "item": [
         {
-          "name": "Get All Users (Admin)",
+          "name": "Get All Users",
           "request": {
             "method": "GET",
             "header": [],
@@ -159,19 +447,90 @@
               "raw": "{{BASE_URL}}/api/auth/admin/users?page=1&limit=20",
               "host": ["{{BASE_URL}}"],
               "path": ["api", "auth", "admin", "users"],
-              "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }]
+              "query": [
+                { "key": "page",  "value": "1"  },
+                { "key": "limit", "value": "20" }
+              ]
             },
-            "description": "Returns a paginated list of all users."
-          }
+            "description": "Returns paginated list of all users. Supports ?search=, ?role=, ?isActive=, ?sort=, ?fields="
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has users array and pagination', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('users');",
+                  "  pm.expect(body).to.have.property('pagination');",
+                  "  pm.expect(body.users).to.be.an('array');",
+                  "  if (body.users.length > 0) {",
+                  "    pm.collectionVariables.set('currentUserId', body.users[0].id || body.users[0]._id);",
+                  "    console.log('Saved first userId for subsequent requests:', pm.collectionVariables.get('currentUserId'));",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "Get User by ID (Admin)",
+          "name": "Get User by ID",
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{BASE_URL}}/api/auth/admin/users/:id", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "admin", "users", ":id"], "variable": [{ "key": "id", "value": "USER_MONGO_ID_HERE" }] },
-            "description": "Returns a specific user by MongoDB ID."
-          }
+            "url": {
+              "raw": "{{BASE_URL}}/api/auth/admin/users/{{currentUserId}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "auth", "admin", "users", "{{currentUserId}}"]
+            },
+            "description": "Returns a specific user by MongoDB ID. Uses 'currentUserId' collection variable (auto-set by Get All Users test script)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has user object', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('user');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create User (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin.created@vibegrid.com\",\n  \"name\": \"Admin Created User\",\n  \"password\": \"AdminCreated@2026!\",\n  \"passwordConfirm\": \"AdminCreated@2026!\",\n  \"role\": \"EMPLOYEE\"\n}"
+            },
+            "url": { "raw": "{{BASE_URL}}/api/auth/admin/users", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "admin", "users"] },
+            "description": "Admin creates a new user with any allowed role. Role can be ADMIN, EMPLOYEE, CLIENT, DEVELOPER."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('User created', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('user');",
+                  "  if (body.user && body.user.id) {",
+                  "    pm.collectionVariables.set('currentUserId', body.user.id);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Update User (Admin)",
@@ -180,14 +539,28 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Updated Name\",\n  \"role\": \"ADMIN\"\n}"
+              "raw": "{\n  \"name\": \"Updated by Admin\",\n  \"role\": \"CLIENT\"\n}"
             },
-            "url": { "raw": "{{BASE_URL}}/api/auth/admin/users/:id", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "admin", "users", ":id"], "variable": [{ "key": "id", "value": "USER_MONGO_ID_HERE" }] },
-            "description": "Admin updates user name and/or role."
-          }
+            "url": {
+              "raw": "{{BASE_URL}}/api/auth/admin/users/{{currentUserId}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "auth", "admin", "users", "{{currentUserId}}"]
+            },
+            "description": "Admin updates user's name and/or role. Uses currentUserId variable."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "Toggle User Status (Admin)",
+          "name": "Toggle User Status (Lock / Unlock)",
           "request": {
             "method": "PATCH",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -195,22 +568,95 @@
               "mode": "raw",
               "raw": "{\n  \"isActive\": false\n}"
             },
-            "url": { "raw": "{{BASE_URL}}/api/auth/admin/users/:id/status", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "admin", "users", ":id", "status"], "variable": [{ "key": "id", "value": "USER_MONGO_ID_HERE" }] },
-            "description": "Locks or unlocks a user account. Locked users cannot log in (isActive=false check)."
+            "url": {
+              "raw": "{{BASE_URL}}/api/auth/admin/users/{{currentUserId}}/status",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "auth", "admin", "users", "{{currentUserId}}", "status"]
+            },
+            "description": "Locks (isActive=false) or unlocks (isActive=true) a user account. Locked users receive 401 on login."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete User (Soft or Hard)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hard\": false\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/auth/admin/users/{{currentUserId}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["api", "auth", "admin", "users", "{{currentUserId}}"]
+            },
+            "description": "Soft-delete (hard:false) marks user as deleted. Hard-delete (hard:true) removes from DB permanently."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🔒 OAuth",
+      "item": [
+        {
+          "name": "Google OAuth — Redirect",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{BASE_URL}}/api/auth/oauth/google", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "oauth", "google"] },
+            "description": "Redirects the browser to Google consent screen. Open in browser — not testable via Postman directly."
+          }
+        },
+        {
+          "name": "GitHub OAuth — Redirect",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{BASE_URL}}/api/auth/oauth/github", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "oauth", "github"] },
+            "description": "Redirects the browser to GitHub consent screen. Open in browser — not testable via Postman directly."
           }
         }
       ]
     },
     {
       "name": "🌐 Via API Gateway (port 8000)",
+      "description": "Test requests routed through the Nginx API Gateway. Requires gateway to be running.",
       "item": [
         {
           "name": "Gateway Health Check",
           "request": {
             "method": "GET",
             "url": { "raw": "{{GATEWAY_URL}}/health", "host": ["{{GATEWAY_URL}}"], "path": ["health"] },
-            "description": "Verify the Nginx API Gateway is healthy."
-          }
+            "description": "Verify the Nginx API Gateway is alive and routing correctly."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Login via Gateway",
@@ -219,11 +665,21 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"test@vibegrid.com\",\n  \"password\": \"StrongP@ss1\"\n}"
+              "raw": "{\n  \"email\": \"{{ADMIN_EMAIL}}\",\n  \"password\": \"{{ADMIN_PASSWORD}}\"\n}"
             },
             "url": { "raw": "{{GATEWAY_URL}}/api/auth/login", "host": ["{{GATEWAY_URL}}"], "path": ["api", "auth", "login"] },
-            "description": "Tests that the Nginx gateway correctly proxies to the Auth Service."
-          }
+            "description": "Tests that the Nginx gateway correctly proxies login to the Auth Service."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
         }
       ]
     }
