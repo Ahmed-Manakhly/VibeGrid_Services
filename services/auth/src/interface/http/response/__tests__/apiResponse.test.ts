@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { ApiResponse } from '../apiResponse';
+import { ApiResponse, sendSuccess, sendPaginated } from '../apiResponse';
 
 function createMockRes() {
   const res: any = {};
@@ -15,10 +15,10 @@ function createMockRes() {
   return res as Response;
 }
 
-describe('ApiResponse Helper', () => {
-  it('should format standard success response without pagination', () => {
+describe('ApiResponse & Standard HTTP Response Factory Helpers', () => {
+  it('sendSuccess should format standard non-paginated success response', () => {
     const res = createMockRes();
-    ApiResponse.success(res, { user: { id: '1', email: 'test@example.com' } }, 200);
+    sendSuccess(res, 200, { user: { id: '1', email: 'test@example.com' } });
 
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
@@ -27,9 +27,9 @@ describe('ApiResponse Helper', () => {
     });
   });
 
-  it('should format standard success response with custom status code', () => {
+  it('sendSuccess should support custom status codes e.g. 201', () => {
     const res = createMockRes();
-    ApiResponse.success(res, { message: 'Created successfully' }, 201);
+    sendSuccess(res, 201, { message: 'Created successfully' });
 
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith({
@@ -38,7 +38,7 @@ describe('ApiResponse Helper', () => {
     });
   });
 
-  it('should include pagination metadata when provided', () => {
+  it('sendPaginated should format standard paginated response with pagination metadata', () => {
     const res = createMockRes();
     const paginationMeta = {
       total: 50,
@@ -49,13 +49,23 @@ describe('ApiResponse Helper', () => {
       hasPrevPage: true
     };
 
-    ApiResponse.success(res, { users: [] }, 200, paginationMeta);
+    sendPaginated(res, 200, { users: [] }, paginationMeta);
 
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
       status: 'success',
       pagination: paginationMeta,
       data: { users: [] }
+    });
+  });
+
+  it('ApiResponse class methods should delegate cleanly to sendSuccess and sendPaginated', () => {
+    const res = createMockRes();
+    ApiResponse.success(res, { ok: true }, 200);
+
+    expect(res.json).toHaveBeenCalledWith({
+      status: 'success',
+      data: { ok: true }
     });
   });
 });

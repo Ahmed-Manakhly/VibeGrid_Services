@@ -5,7 +5,7 @@ import { AdminGetUserByIdUseCase } from '../../../application/use-cases/AdminGet
 import { AdminUpdateUserUseCase } from '../../../application/use-cases/AdminUpdateUser.usecase';
 import { AdminDeleteUserUseCase } from '../../../application/use-cases/AdminDeleteUser.usecase';
 import { ValidationError } from '../../../application/errors/errors';
-import { ApiResponse } from '../response/apiResponse';
+import { sendSuccess, sendPaginated } from '../response/apiResponse';
 
 export class AdminUserController {
   constructor(
@@ -23,8 +23,9 @@ export class AdminUserController {
     }
 
     const user = await this.adminCreateUserUseCase.execute({ email, password, name, role, isActive });
-    ApiResponse.success(
+    sendSuccess(
       res,
+      201,
       {
         message: 'User created successfully',
         user: {
@@ -34,8 +35,7 @@ export class AdminUserController {
           role: user.role,
           isActive: user.isActive
         }
-      },
-      201
+      }
     );
   };
 
@@ -58,8 +58,9 @@ export class AdminUserController {
       fields
     });
 
-    ApiResponse.success(
+    sendPaginated(
       res,
+      200,
       {
         users: result.users.map((u) => ({
           id: u.id,
@@ -70,7 +71,6 @@ export class AdminUserController {
           createdAt: u.createdAt
         }))
       },
-      200,
       result.pagination
     );
   };
@@ -78,7 +78,7 @@ export class AdminUserController {
   getUserById = async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
     const user = await this.adminGetUserByIdUseCase.execute(id);
-    ApiResponse.success(res, {
+    sendSuccess(res, 200, {
       user: {
         id: user.id,
         email: user.email,
@@ -106,7 +106,7 @@ export class AdminUserController {
       isActive
     });
 
-    ApiResponse.success(res, {
+    sendSuccess(res, 200, {
       message: 'User updated successfully',
       user: {
         id: user.id,
@@ -135,7 +135,7 @@ export class AdminUserController {
       isActive
     });
 
-    ApiResponse.success(res, {
+    sendSuccess(res, 200, {
       message: `User status changed to ${isActive ? 'active' : 'locked'}`,
       user: {
         id: user.id,
@@ -156,6 +156,6 @@ export class AdminUserController {
       targetUserId: id
     });
 
-    ApiResponse.success(res, { message: 'User deleted successfully' });
+    sendSuccess(res, 200, { message: 'User deleted successfully' });
   };
 }
