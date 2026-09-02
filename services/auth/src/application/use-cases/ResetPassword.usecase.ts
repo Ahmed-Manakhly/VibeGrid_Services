@@ -62,11 +62,12 @@ export class ResetPasswordUseCase {
       throw new AccountLockedError('Account is locked. Please contact support.');
     }
 
-    // 6. Hash new password and set passwordChangedAt
+    // 6. Hash new password, update passwordChangedAt, and clear login lockout counters
     const newPasswordHash = await this.passwordHasher.hash(input.newPassword);
     const now = new Date();
 
     user.updatePassword(newPasswordHash, now);
+    user.resetLockout();
     await this.userAuthRepo.save(user);
 
     // 7. Clear used OTP token

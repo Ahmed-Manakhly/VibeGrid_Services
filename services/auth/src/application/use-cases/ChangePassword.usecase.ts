@@ -1,6 +1,7 @@
 import { IUserAuthRepository } from '../../domain/ports/IUserAuthRepository';
 import { IPasswordHasher } from '../../domain/ports/IPasswordHasher';
 import { IRevokedTokenRepository } from '../../domain/ports/IRevokedTokenRepository';
+import { IRefreshTokenRepo } from '../../domain/ports/IRefreshTokenRepo';
 import { PasswordComplexityValidator } from '../../domain/value-objects/PasswordComplexityValidator.vo';
 import { RevokedToken } from '../../domain/entities/RevokedToken.entity';
 
@@ -8,25 +9,39 @@ export interface ChangePasswordInputDTO {
   userId: string;
   currentPassword: string;
   newPassword: string;
-  accessToken: string;
+  passwordConfirm: string;
+  accessToken?: string;
   refreshToken?: string;
   accessTokenExpiresAt?: Date;
   refreshTokenExpiresAt?: Date;
 }
 
-import { UserNotFoundError, InvalidCredentialsError, ValidationError } from '../errors/errors';
+import { UserNotFoundError, InvalidCredentialsError, ValidationError, UnauthorizedError } from '../errors/errors';
 
 export class ChangePasswordUseCase {
   constructor(
     private userAuthRepo: IUserAuthRepository,
     private hasher: IPasswordHasher,
-    private revokedTokenRepo: IRevokedTokenRepository
+    private revokedTokenRepo: IRevokedTokenRepository,
+    private refreshTokenRepo?: IRefreshTokenRepo
   ) {}
 
   public async execute(input: ChangePasswordInputDTO): Promise<void> {
+    if (!input.currentPassword || !input.newPassword || !input.passwordConfirm) {
+      throw new ValidationError('Please provide currentPassword, newPassword, and passwordConfirm');
+    }
+
+    if (input.newPassword !== input.passwordConfirm) {
+      throw new ValidationError('Password and password confirmation do not match');
+    }
+
     const user = await this.userAuthRepo.findById(input.userId);
-    if (!user || !user.passwordHash) {
+    if (!user || !user.passwordHash || user.isDeleted) {
       throw new UserNotFoundError('User not found or using OAuth authentication');
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedError('User account is inactive or locked');
     }
 
     // 1. Verify current password
@@ -64,6 +79,14 @@ export class ChangePasswordUseCase {
         expiresAt: input.refreshTokenExpiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
       });
       await this.revokedTokenRepo.revoke(refreshRevocation);
+
+      if (this.refreshTokenRepo) {
+        const parts = input.refreshToken.split(':');
+        if (parts.length === 2) {
+          const [familyId] = parts;
+          await this.refreshTokenRepo.revokeFamily(familyId);
+        }
+      }
     }
   }
 }

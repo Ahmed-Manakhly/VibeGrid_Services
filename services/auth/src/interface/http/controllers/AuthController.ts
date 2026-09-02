@@ -152,7 +152,7 @@ export class AuthController {
 
   changePassword = async (req: Request, res: Response): Promise<void> => {
     const userId = (req as any).user?.id || (req as any).user?.sub;
-    const { currentPassword, newPassword } = req.body;
+    const { currentPassword, newPassword, passwordConfirm } = req.body;
     const accessToken = req.cookies?.access_token || req.headers.authorization?.split(' ')[1];
     const refreshToken = req.cookies?.refresh_token;
 
@@ -160,14 +160,15 @@ export class AuthController {
       throw new UnauthorizedError('Unauthorized');
     }
 
-    if (!currentPassword || !newPassword) {
-      throw new ValidationError('Please provide currentPassword and newPassword');
+    if (!currentPassword || !newPassword || !passwordConfirm) {
+      throw new ValidationError('Please provide currentPassword, newPassword, and passwordConfirm');
     }
 
     await this.changePasswordUseCase.execute({
       userId,
       currentPassword,
       newPassword,
+      passwordConfirm,
       accessToken,
       refreshToken
     });
