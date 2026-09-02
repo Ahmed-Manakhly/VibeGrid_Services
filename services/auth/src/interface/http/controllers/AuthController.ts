@@ -69,7 +69,12 @@ export class AuthController {
       res,
       {
         message: 'User registered successfully',
-        user: result.user
+        user: {
+          id: result.user.id,
+          email: result.user.email,
+          name: result.user.name,
+          role: result.user.role
+        }
       },
       201
     );
@@ -86,7 +91,12 @@ export class AuthController {
 
     ApiResponse.success(res, {
       message: 'Authenticated successfully',
-      user: result.user
+      user: {
+        id: result.user.id,
+        email: result.user.email,
+        name: result.user.name,
+        role: result.user.role
+      }
     });
   };
 
