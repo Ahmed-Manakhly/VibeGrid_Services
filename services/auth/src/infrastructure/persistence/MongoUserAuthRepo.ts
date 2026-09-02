@@ -90,7 +90,8 @@ export class MongoUserAuthRepo implements IUserAuthRepository {
       }
     }
 
-    // 5. Projection selection (whitelisted safe fields, excluding sensitive secrets)
+    // 5. Projection selection (whitelisted safe fields, strictly excluding sensitive secrets)
+    const sensitiveFields = new Set(['passwordHash', 'failedAttempts', 'lockoutUntil']);
     const allowedProjection: Record<string, number> = {
       _id: 1,
       email: 1,
@@ -103,8 +104,22 @@ export class MongoUserAuthRepo implements IUserAuthRepository {
       updatedAt: 1
     };
 
+    let projection: Record<string, number> = { ...allowedProjection };
+    if (query?.fields && Array.isArray(query.fields) && query.fields.length > 0) {
+      const customProjection: Record<string, number> = { _id: 1 };
+      for (const field of query.fields) {
+        const trimmed = field.trim();
+        if (allowedProjection[trimmed] && !sensitiveFields.has(trimmed)) {
+          customProjection[trimmed] = 1;
+        }
+      }
+      if (Object.keys(customProjection).length > 1) {
+        projection = customProjection;
+      }
+    }
+
     const [docs, total] = await Promise.all([
-      UserAuthModel.find(filter, allowedProjection).sort(sortOptions).skip(skip).limit(limit).exec(),
+      UserAuthModel.find(filter, projection).sort(sortOptions).skip(skip).limit(limit).exec(),
       UserAuthModel.countDocuments(filter).exec()
     ]);
 

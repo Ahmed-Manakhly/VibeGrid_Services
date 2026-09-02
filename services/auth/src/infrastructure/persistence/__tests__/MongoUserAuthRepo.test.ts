@@ -115,4 +115,28 @@ describe('MongoUserAuthRepo Query Features & Filtering', () => {
     const filterPassed = (UserAuthModel.find as jest.Mock).mock.calls[0][0];
     expect(filterPassed.role).toBeUndefined();
   });
+
+  it('should restrict field projection to whitelisted non-sensitive fields', async () => {
+    const mockExec = jest.fn().mockResolvedValue([]);
+    const mockLimit = jest.fn().mockReturnValue({ exec: mockExec });
+    const mockSkip = jest.fn().mockReturnValue({ limit: mockLimit });
+    const mockSort = jest.fn().mockReturnValue({ skip: mockSkip });
+
+    (UserAuthModel.find as jest.Mock).mockReturnValue({ sort: mockSort });
+    (UserAuthModel.countDocuments as jest.Mock).mockReturnValue({
+      exec: jest.fn().mockResolvedValue(0)
+    });
+
+    await repo.findAll({ fields: ['email', 'name', 'passwordHash', 'failedAttempts', 'lockoutUntil'] });
+
+    const projectionPassed = (UserAuthModel.find as jest.Mock).mock.calls[0][1];
+    expect(projectionPassed).toEqual({
+      _id: 1,
+      email: 1,
+      name: 1
+    });
+    expect(projectionPassed.passwordHash).toBeUndefined();
+    expect(projectionPassed.failedAttempts).toBeUndefined();
+    expect(projectionPassed.lockoutUntil).toBeUndefined();
+  });
 });
