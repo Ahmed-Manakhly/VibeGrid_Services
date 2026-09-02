@@ -3,6 +3,7 @@ import { AdminCreateUserUseCase } from '../../../application/use-cases/AdminCrea
 import { AdminGetUsersUseCase } from '../../../application/use-cases/AdminGetUsers.usecase';
 import { AdminGetUserByIdUseCase } from '../../../application/use-cases/AdminGetUserById.usecase';
 import { AdminUpdateUserUseCase } from '../../../application/use-cases/AdminUpdateUser.usecase';
+import { AdminDeleteUserUseCase } from '../../../application/use-cases/AdminDeleteUser.usecase';
 import { ValidationError } from '../../../application/errors/errors';
 
 export class AdminUserController {
@@ -10,7 +11,8 @@ export class AdminUserController {
     private adminCreateUserUseCase: AdminCreateUserUseCase,
     private adminGetUsersUseCase: AdminGetUsersUseCase,
     private adminGetUserByIdUseCase: AdminGetUserByIdUseCase,
-    private adminUpdateUserUseCase: AdminUpdateUserUseCase
+    private adminUpdateUserUseCase: AdminUpdateUserUseCase,
+    private adminDeleteUserUseCase: AdminDeleteUserUseCase
   ) {}
 
   createUser = async (req: Request, res: Response): Promise<void> => {
@@ -72,8 +74,18 @@ export class AdminUserController {
   updateUser = async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
     const { name, role, isActive } = req.body;
+    const callerUserId = (req as any).user?.id || (req as any).user?.sub;
+    const callerRole = (req as any).user?.role;
 
-    const user = await this.adminUpdateUserUseCase.execute({ userId: id, name, role, isActive });
+    const user = await this.adminUpdateUserUseCase.execute({
+      callerUserId,
+      callerRole,
+      userId: id,
+      name,
+      role,
+      isActive
+    });
+
     res.status(200).json({
       message: 'User updated successfully',
       user: {
@@ -89,12 +101,20 @@ export class AdminUserController {
   toggleStatus = async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
     const { isActive } = req.body;
+    const callerUserId = (req as any).user?.id || (req as any).user?.sub;
+    const callerRole = (req as any).user?.role;
 
     if (typeof isActive !== 'boolean') {
       throw new ValidationError('isActive must be a boolean');
     }
 
-    const user = await this.adminUpdateUserUseCase.execute({ userId: id, isActive });
+    const user = await this.adminUpdateUserUseCase.execute({
+      callerUserId,
+      callerRole,
+      userId: id,
+      isActive
+    });
+
     res.status(200).json({
       message: `User status changed to ${isActive ? 'active' : 'locked'}`,
       user: {
@@ -103,5 +123,19 @@ export class AdminUserController {
         isActive: user.isActive
       }
     });
+  };
+
+  deleteUser = async (req: Request, res: Response): Promise<void> => {
+    const { id } = req.params;
+    const callerUserId = (req as any).user?.id || (req as any).user?.sub;
+    const callerRole = (req as any).user?.role;
+
+    await this.adminDeleteUserUseCase.execute({
+      callerUserId,
+      callerRole,
+      targetUserId: id
+    });
+
+    res.status(200).json({ message: 'User deleted successfully' });
   };
 }

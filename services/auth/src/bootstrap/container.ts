@@ -23,6 +23,7 @@ import { AdminCreateUserUseCase } from '../application/use-cases/AdminCreateUser
 import { AdminGetUsersUseCase } from '../application/use-cases/AdminGetUsers.usecase';
 import { AdminGetUserByIdUseCase } from '../application/use-cases/AdminGetUserById.usecase';
 import { AdminUpdateUserUseCase } from '../application/use-cases/AdminUpdateUser.usecase';
+import { AdminDeleteUserUseCase } from '../application/use-cases/AdminDeleteUser.usecase';
 
 import { AuthController } from '../interface/http/controllers/AuthController';
 import { OAuthController } from '../interface/http/controllers/OAuthController';
@@ -72,7 +73,7 @@ export function createContainer(config: AppConfig, eventPublisher: RabbitMQPubli
     tokenSigner
   );
 
-  const revokeTokenUseCase = new RevokeTokenUseCase(revokedTokenRepo);
+  const revokeTokenUseCase = new RevokeTokenUseCase(revokedTokenRepo, refreshTokenRepo);
 
   const requestPasswordResetUseCase = new RequestPasswordResetUseCase(
     userAuthRepo,
@@ -114,6 +115,7 @@ export function createContainer(config: AppConfig, eventPublisher: RabbitMQPubli
   const adminGetUsersUseCase = new AdminGetUsersUseCase(userAuthRepo);
   const adminGetUserByIdUseCase = new AdminGetUserByIdUseCase(userAuthRepo);
   const adminUpdateUserUseCase = new AdminUpdateUserUseCase(userAuthRepo);
+  const adminDeleteUserUseCase = new AdminDeleteUserUseCase(userAuthRepo);
 
   // Controllers & Middlewares
   const authController = new AuthController(
@@ -135,7 +137,8 @@ export function createContainer(config: AppConfig, eventPublisher: RabbitMQPubli
     adminCreateUserUseCase,
     adminGetUsersUseCase,
     adminGetUserByIdUseCase,
-    adminUpdateUserUseCase
+    adminUpdateUserUseCase,
+    adminDeleteUserUseCase
   );
 
   const protectMiddleware = createProtectMiddleware(validateTokenGuardUseCase, tokenSigner);

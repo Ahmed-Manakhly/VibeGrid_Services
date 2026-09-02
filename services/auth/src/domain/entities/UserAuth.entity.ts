@@ -10,6 +10,7 @@ export interface UserAuthProps {
   passwordChangedAt?: Date;
   failedAttempts?: number;
   lockoutUntil?: Date | null;
+  deletedAt?: Date | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -25,6 +26,7 @@ export class UserAuth {
       isActive: props.isActive !== undefined ? props.isActive : true,
       failedAttempts: props.failedAttempts ?? 0,
       lockoutUntil: props.lockoutUntil ?? undefined,
+      deletedAt: props.deletedAt ?? undefined,
       passwordChangedAt: props.passwordChangedAt,
       createdAt: props.createdAt || new Date(),
       updatedAt: props.updatedAt || new Date()
@@ -75,6 +77,14 @@ export class UserAuth {
     return this.props.lockoutUntil || undefined;
   }
 
+  public get deletedAt(): Date | undefined {
+    return this.props.deletedAt || undefined;
+  }
+
+  public get isDeleted(): boolean {
+    return !!this.props.deletedAt;
+  }
+
   public get passwordChangedAt(): Date | undefined {
     return this.props.passwordChangedAt;
   }
@@ -85,6 +95,12 @@ export class UserAuth {
 
   public get updatedAt(): Date {
     return this.props.updatedAt || new Date();
+  }
+
+  public softDelete(now: Date = new Date()): void {
+    this.props.deletedAt = now;
+    this.props.isActive = false;
+    this.props.updatedAt = now;
   }
 
   public isLockedOut(now: Date = new Date()): boolean {

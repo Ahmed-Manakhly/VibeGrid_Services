@@ -18,7 +18,7 @@ export class AuthenticateUseCase {
 
   async execute(dto: LoginDTO): Promise<AuthTokensDTO> {
     const user = await this.userAuthRepo.findByEmail(dto.email);
-    if (!user || !user.passwordHash) {
+    if (!user || !user.passwordHash || user.isDeleted) {
       throw new InvalidCredentialsError('Invalid email or password');
     }
 
