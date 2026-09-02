@@ -9,6 +9,7 @@ export interface RequestPasswordResetInput {
 }
 
 import { AccountLockedError, RateLimitError } from '../errors/errors';
+import crypto from 'crypto';
 
 export class RequestPasswordResetUseCase {
   constructor(
@@ -38,8 +39,8 @@ export class RequestPasswordResetUseCase {
       throw new RateLimitError('OTP request already sent. Please wait before requesting again.');
     }
 
-    // 3. Generate 4-digit OTP
-    const otp = `${Math.floor(1000 + Math.random() * 9000)}`;
+    // 3. Generate 4-digit OTP using CSPRNG
+    const otp = crypto.randomInt(1000, 10000).toString();
     const hashedOtp = await this.passwordHasher.hash(otp);
 
     // 4. Set 5-minute expiration
