@@ -7,9 +7,10 @@ import { RegisterDTO, AuthTokensDTO } from '../dtos/auth.dtos';
 import { ITokenSigner } from '../../domain/ports/ITokenSigner';
 import { IRefreshTokenRepo } from '../../domain/ports/IRefreshTokenRepo';
 import { RefreshToken } from '../../domain/entities/RefreshToken.entity';
+import { PasswordComplexityValidator } from '../../domain/value-objects/PasswordComplexityValidator.vo';
 import crypto from 'crypto';
 
-import { DuplicateEmailError } from '../errors/errors';
+import { DuplicateEmailError, ValidationError } from '../errors/errors';
 
 export class RegisterUserUseCase {
   constructor(
@@ -21,16 +22,51 @@ export class RegisterUserUseCase {
   ) {}
 
   async execute(dto: RegisterDTO): Promise<AuthTokensDTO> {
-    const existing = await this.userAuthRepo.findByEmail(dto.email);
+    if (!dto.email) {
+      throw new ValidationError('Email is required');
+    }
+
+    const normalizedEmail = dto.email.trim().toLowerCase();
+
+    if (!dto.password || !dto.passwordConfirm) {
+      throw new ValidationError('Password and password confirmation are required');
+    }
+
+    if (dto.password !== dto.passwordConfirm) {
+      throw new ValidationError('Password and confirm password do not match');
+    }
+
+    const complexityResult = PasswordComplexityValidator.validate(dto.password);
+    if (!complexityResult.isValid) {
+      throw new ValidationError(complexityResult.error || 'Password does not meet complexity requirements');
+    }
+
+    // Role assignment check: Block privileged roles (ADMIN, SUPER_ADMIN, EMPLOYEE)
+    const allowedSelfRegRoles = ['CLIENT', 'DEVELOPER', 'USER'];
+    let assignedRole = 'CLIENT';
+
+    if (dto.role) {
+      const upperRole = dto.role.toUpperCase();
+      const forbiddenRoles = ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE'];
+      if (forbiddenRoles.includes(upperRole)) {
+        throw new ValidationError('Self-assignment of privileged roles is not allowed');
+      }
+      if (allowedSelfRegRoles.includes(upperRole)) {
+        assignedRole = upperRole;
+      }
+    }
+
+    const existing = await this.userAuthRepo.findByEmail(normalizedEmail);
     if (existing) {
       throw new DuplicateEmailError('Email already registered');
     }
 
     const hashedPassword = await this.hasher.hash(dto.password);
     const newUser = UserAuth.create({
-      email: dto.email,
+      email: normalizedEmail,
       passwordHash: hashedPassword,
       name: dto.name,
+      role: assignedRole,
       provider: 'local'
     });
 

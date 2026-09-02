@@ -49,12 +49,12 @@ export class AuthController {
   }
 
   register = async (req: Request, res: Response): Promise<void> => {
-    const { email, password, name } = req.body;
-    if (!email || !password) {
-      throw new ValidationError('Email and password are required');
+    const { email, password, passwordConfirm, name, role } = req.body;
+    if (!email || !password || !passwordConfirm) {
+      throw new ValidationError('Email, password, and password confirmation are required');
     }
 
-    const result = await this.registerUserUseCase.execute({ email, password, name });
+    const result = await this.registerUserUseCase.execute({ email, password, passwordConfirm, name, role });
     this.setCookies(res, result.accessToken, result.refreshToken);
 
     res.status(201).json({
