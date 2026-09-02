@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { OAuthLoginUseCase } from '../../../application/use-cases/OAuthLogin.usecase';
 import { ValidationError } from '../../../application/errors/errors';
 import { ApiResponse } from '../response/apiResponse';
-import { TokenExpiryConfig } from '../../../config/env';
+import { TokenExpiryConfig, OAuthConfig } from '../../../config/env';
 
 export class OAuthController {
   constructor(
@@ -13,12 +13,14 @@ export class OAuthController {
       accessTokenMaxAgeMs: 15 * 60 * 1000,
       refreshTokenMaxAgeMs: 7 * 24 * 60 * 60 * 1000,
       emailVerificationTokenExpiresInSec: 900
-    }
+    },
+    private oauthConfig: OAuthConfig = {},
+    private isProd: boolean = false
   ) {}
 
   googleLogin = (req: Request, res: Response): void => {
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:8000/api/auth/oauth/google/callback';
+    const clientId = this.oauthConfig.googleClientId;
+    const redirectUri = this.oauthConfig.googleRedirectUri || 'http://localhost:8000/api/auth/oauth/google/callback';
 
     if (!clientId) {
       throw new Error('GOOGLE_CLIENT_ID not configured');
@@ -45,15 +47,14 @@ export class OAuthController {
       name: 'Google User'
     });
 
-    const isProd = process.env.NODE_ENV === 'production';
     res.cookie('access_token', result.accessToken, {
       httpOnly: true,
-      secure: isProd,
+      secure: this.isProd,
       maxAge: this.tokenExpiry.accessTokenMaxAgeMs
     });
     res.cookie('refresh_token', result.refreshToken, {
       httpOnly: true,
-      secure: isProd,
+      secure: this.isProd,
       maxAge: this.tokenExpiry.refreshTokenMaxAgeMs
     });
 
@@ -61,8 +62,8 @@ export class OAuthController {
   };
 
   githubLogin = (req: Request, res: Response): void => {
-    const clientId = process.env.GITHUB_CLIENT_ID;
-    const redirectUri = process.env.GITHUB_REDIRECT_URI || 'http://localhost:8000/api/auth/oauth/github/callback';
+    const clientId = this.oauthConfig.githubClientId;
+    const redirectUri = this.oauthConfig.githubRedirectUri || 'http://localhost:8000/api/auth/oauth/github/callback';
 
     if (!clientId) {
       throw new Error('GITHUB_CLIENT_ID not configured');
@@ -88,15 +89,14 @@ export class OAuthController {
       name: 'GitHub User'
     });
 
-    const isProd = process.env.NODE_ENV === 'production';
     res.cookie('access_token', result.accessToken, {
       httpOnly: true,
-      secure: isProd,
+      secure: this.isProd,
       maxAge: this.tokenExpiry.accessTokenMaxAgeMs
     });
     res.cookie('refresh_token', result.refreshToken, {
       httpOnly: true,
-      secure: isProd,
+      secure: this.isProd,
       maxAge: this.tokenExpiry.refreshTokenMaxAgeMs
     });
 

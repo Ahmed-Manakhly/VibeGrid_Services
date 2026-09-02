@@ -4,7 +4,6 @@ import { IEmailSender } from '../../domain/ports/IEmailSender';
 import { EmailToken } from '../../domain/entities/EmailToken.entity';
 import { EmailValidator } from '../../domain/value-objects/EmailValidator.vo';
 import { ValidationError, UserNotFoundError } from '../errors/errors';
-import { EmailVerificationTemplate } from '../../infrastructure/email/templates/EmailVerificationTemplate';
 import crypto from 'crypto';
 
 export interface SendEmailVerificationInputDTO {
@@ -63,19 +62,12 @@ export class SendEmailVerificationTokenUseCase {
 
     await this.emailTokenRepo.upsert(tokenEntity);
 
-    // Render email using template renderer
-    const { subject, html, text } = EmailVerificationTemplate.render({
+    // Send verification email via domain port — template rendering is handled by infrastructure
+    await this.emailSender.sendEmailVerification({
+      to: normalizedEmail,
       name: user.name,
       otp,
       expiresInMinutes
-    });
-
-    // Send verification email — errors are allowed to propagate cleanly
-    await this.emailSender.sendEmail({
-      to: normalizedEmail,
-      subject,
-      html,
-      text
     });
 
     return { message: 'Verification OTP code sent to your email' };

@@ -19,6 +19,9 @@ import { GetMeUseCase } from '../application/use-cases/GetMe.usecase';
 import { UpdateMeUseCase } from '../application/use-cases/UpdateMe.usecase';
 import { ValidateTokenGuardUseCase } from '../application/use-cases/ValidateTokenGuard.usecase';
 import { OAuthLoginUseCase } from '../application/use-cases/OAuthLogin.usecase';
+import { VerifyEmailUseCase } from '../application/use-cases/VerifyEmail.usecase';
+import { SendEmailVerificationTokenUseCase } from '../application/use-cases/SendEmailVerificationToken.usecase';
+
 import { AdminCreateUserUseCase } from '../application/use-cases/AdminCreateUser.usecase';
 import { AdminGetUsersUseCase } from '../application/use-cases/AdminGetUsers.usecase';
 import { AdminGetUserByIdUseCase } from '../application/use-cases/AdminGetUserById.usecase';
@@ -41,16 +44,15 @@ export interface ServiceContainer {
   adminCreateUserUseCase: AdminCreateUserUseCase;
 }
 
-import { VerifyEmailUseCase } from '../application/use-cases/VerifyEmail.usecase';
-import { SendEmailVerificationTokenUseCase } from '../application/use-cases/SendEmailVerificationToken.usecase';
-
 export function createContainer(config: AppConfig, eventPublisher: RabbitMQPublisher): ServiceContainer {
+  const isProd = config.nodeEnv === 'production';
+
   // Repositories & Adapters
   const userAuthRepo = new MongoUserAuthRepo();
   const refreshTokenRepo = new MongoRefreshTokenRepo();
   const revokedTokenRepo = new MongoRevokedTokenRepo();
   const emailTokenRepo = new MongoEmailTokenRepo();
-  const emailSender = new NodemailerEmailSender();
+  const emailSender = new NodemailerEmailSender(config.smtp);
   const hasher = new Argon2Hasher();
   const tokenSigner = new RS256TokenSigner(
     config.jwtPrivateKeyPath,
@@ -152,10 +154,18 @@ export function createContainer(config: AppConfig, eventPublisher: RabbitMQPubli
     tokenSigner,
     config.tokenExpiry,
     verifyEmailUseCase,
-    sendEmailVerificationTokenUseCase
+    sendEmailVerificationTokenUseCase,
+    config.cookieDomain,
+    isProd
   );
 
-  const oauthController = new OAuthController(oauthLoginUseCase, config.tokenExpiry);
+  const oauthController = new OAuthController(
+    oauthLoginUseCase,
+    config.tokenExpiry,
+    config.oauth,
+    isProd
+  );
+
   const adminUserController = new AdminUserController(
     adminCreateUserUseCase,
     adminGetUsersUseCase,

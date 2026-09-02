@@ -1,28 +1,53 @@
 import nodemailer from 'nodemailer';
-import { IEmailSender, SendEmailPayload } from '../../domain/ports/IEmailSender';
+import { IEmailSender, SendEmailPayload, SendEmailVerificationPayload } from '../../domain/ports/IEmailSender';
+import { EmailVerificationTemplate } from './templates/EmailVerificationTemplate';
+
+export interface SmtpConfig {
+  host?: string;
+  port?: number;
+  user?: string;
+  pass?: string;
+  from?: string;
+}
 
 export class NodemailerEmailSender implements IEmailSender {
   private transporter: nodemailer.Transporter;
+  private from: string;
 
-  constructor() {
+  constructor(config?: SmtpConfig) {
+    this.from = config?.from || '"VibeGrid Support" <noreply@vibegrid.com>';
     this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.mailtrap.io',
-      port: parseInt(process.env.SMTP_PORT || '2525', 10),
+      host: config?.host || 'smtp.mailtrap.io',
+      port: config?.port || 2525,
       auth: {
-        user: process.env.SMTP_USER || '',
-        pass: process.env.SMTP_PASS || ''
+        user: config?.user || '',
+        pass: config?.pass || ''
       }
     });
   }
 
   public async sendEmail(payload: SendEmailPayload): Promise<void> {
-    const from = process.env.EMAIL_FROM || '"VibeGrid Support" <noreply@vibegrid.com>';
     await this.transporter.sendMail({
-      from,
+      from: this.from,
       to: payload.to,
       subject: payload.subject,
       html: payload.html,
       text: payload.text
+    });
+  }
+
+  public async sendEmailVerification(payload: SendEmailVerificationPayload): Promise<void> {
+    const { subject, html, text } = EmailVerificationTemplate.render({
+      name: payload.name,
+      otp: payload.otp,
+      expiresInMinutes: payload.expiresInMinutes
+    });
+
+    await this.sendEmail({
+      to: payload.to,
+      subject,
+      html,
+      text
     });
   }
 }

@@ -12,6 +12,13 @@ export interface TokenExpiryConfig {
   emailVerificationTokenExpiresInSec: number;
 }
 
+export interface OAuthConfig {
+  googleClientId?: string;
+  googleRedirectUri?: string;
+  githubClientId?: string;
+  githubRedirectUri?: string;
+}
+
 export interface AppConfig {
   port: number;
   nodeEnv: 'development' | 'production' | 'test' | 'docker_development';
@@ -28,6 +35,7 @@ export interface AppConfig {
     pass?: string;
     from?: string;
   };
+  oauth: OAuthConfig;
   bootstrapAdmin?: {
     email?: string;
     password?: string;
@@ -99,11 +107,17 @@ export function loadAndValidateConfig(): AppConfig {
       emailVerificationTokenExpiresInSec
     },
     smtp: {
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587,
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-      from: process.env.EMAIL_FROM || 'VibeGrid Auth <noreply@vibegrid.local>'
+      host: process.env.SMTP_HOST || 'smtp.mailtrap.io',
+      port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 2525,
+      user: process.env.SMTP_USER || '',
+      pass: process.env.SMTP_PASS || '',
+      from: process.env.EMAIL_FROM || '"VibeGrid Support" <noreply@vibegrid.com>'
+    },
+    oauth: {
+      googleClientId: process.env.GOOGLE_CLIENT_ID,
+      googleRedirectUri: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:8000/api/auth/oauth/google/callback',
+      githubClientId: process.env.GITHUB_CLIENT_ID,
+      githubRedirectUri: process.env.GITHUB_REDIRECT_URI || 'http://localhost:8000/api/auth/oauth/github/callback'
     },
     bootstrapAdmin: {
       email: process.env.ADMIN_EMAIL,

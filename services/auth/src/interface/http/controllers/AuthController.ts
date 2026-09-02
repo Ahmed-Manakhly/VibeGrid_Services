@@ -38,12 +38,14 @@ export class AuthController {
       emailVerificationTokenExpiresInSec: 900
     },
     private verifyEmailUseCase?: VerifyEmailUseCase,
-    private sendEmailVerificationTokenUseCase?: SendEmailVerificationTokenUseCase
+    private sendEmailVerificationTokenUseCase?: SendEmailVerificationTokenUseCase,
+    private cookieDomain?: string,
+    private isProd: boolean = false
   ) { }
 
   private setCookies(res: Response, accessToken: string, refreshToken: string): void {
-    const isProd = process.env.NODE_ENV === 'production';
-    const domain = process.env.COOKIE_DOMAIN || undefined;
+    const isProd = this.isProd;
+    const domain = this.cookieDomain;
 
     res.cookie('access_token', accessToken, {
       httpOnly: true,
@@ -185,11 +187,7 @@ export class AuthController {
       throw new ValidationError('Email is required');
     }
 
-    if (!this.sendEmailVerificationTokenUseCase) {
-      throw new Error('Email verification service is not initialized');
-    }
-
-    const result = await this.sendEmailVerificationTokenUseCase.execute({ email });
+    const result = await this.sendEmailVerificationTokenUseCase!.execute({ email });
     sendSuccess(res, 200, result);
   };
 
@@ -199,11 +197,7 @@ export class AuthController {
       throw new ValidationError('Email and OTP code are required');
     }
 
-    if (!this.verifyEmailUseCase) {
-      throw new Error('Email verification service is not initialized');
-    }
-
-    const result = await this.verifyEmailUseCase.execute({ email, otp });
+    const result = await this.verifyEmailUseCase!.execute({ email, otp });
     sendSuccess(res, 200, result);
   };
 

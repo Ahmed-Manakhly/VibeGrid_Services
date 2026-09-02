@@ -26,7 +26,8 @@ describe('VerifyEmailUseCase & SendEmailVerificationTokenUseCase', () => {
     };
 
     mockEmailSender = {
-      sendEmail: jest.fn().mockResolvedValue(undefined)
+      sendEmail: jest.fn().mockResolvedValue(undefined),
+      sendEmailVerification: jest.fn().mockResolvedValue(undefined)
     };
 
     verifyEmailUseCase = new VerifyEmailUseCase(mockUserAuthRepo, mockEmailTokenRepo);
@@ -150,10 +151,10 @@ describe('VerifyEmailUseCase & SendEmailVerificationTokenUseCase', () => {
       const storedToken: EmailToken = mockEmailTokenRepo.upsert.mock.calls[0][0];
       expect(storedToken.tokenHash).not.toEqual('123456'); // Ensure plaintext OTP is NOT stored
 
-      expect(mockEmailSender.sendEmail).toHaveBeenCalledWith(
+      expect(mockEmailSender.sendEmailVerification).toHaveBeenCalledWith(
         expect.objectContaining({
           to: 'user@example.com',
-          subject: expect.stringContaining('Verify Your VibeGrid Account Email')
+          otp: expect.any(String)
         })
       );
     });
