@@ -50,7 +50,7 @@ export interface AppConfig {
 
 export function loadAndValidateConfig(): AppConfig {
   const nodeEnv = (process.env.NODE_ENV as AppConfig['nodeEnv']) || 'development';
-  const port = parseInt(process.env.PORT || '3001', 10);
+  const port = parseInt(process.env.PORT || '8001', 10);
   const mongoUri = process.env.MONGO_URI;
   const rabbitmqUrl = process.env.RABBITMQ_URL;
 
