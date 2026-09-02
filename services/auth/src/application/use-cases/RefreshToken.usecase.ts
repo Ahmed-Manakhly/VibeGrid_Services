@@ -41,8 +41,35 @@ export class RefreshTokenUseCase {
     // Retrieve user for fresh claims
     const user = await this.userAuthRepo.findById(existingToken.userId);
     if (!user) {
+      await this.refreshTokenRepo.revokeFamily(familyId);
       throw new UserNotFoundError('User not found');
     }
+
+    // 1. Check user.isActive
+    if (!user.isActive) {
+      await this.refreshTokenRepo.revokeFamily(familyId);
+      throw new UnauthorizedError('User account is inactive or locked');
+    }
+
+    // 2. Check passwordChangedAt vs existingToken.createdAt
+    if (user.passwordChangedAt && existingToken.createdAt) {
+      const passwordChangedTimeSec = Math.floor(user.passwordChangedAt.getTime() / 1000);
+      const tokenCreatedTimeSec = Math.floor(existingToken.createdAt.getTime() / 1000);
+      if (tokenCreatedTimeSec < passwordChangedTimeSec) {
+        await this.refreshTokenRepo.revokeFamily(familyId);
+        throw new UnauthorizedError('Password was changed after token issuance. Please login again.');
+      }
+    }
+
+    // 3. Check role drift (token role vs DB user role)
+    if (existingToken.role && existingToken.role !== user.role) {
+      await this.refreshTokenRepo.revokeFamily(familyId);
+      throw new UnauthorizedError('User role has changed. Please login again.');
+    }
+
+    // Revoke old token
+    existingToken.revoke();
+    await this.refreshTokenRepo.save(existingToken);
 
     // Issue new access token
     const newAccessToken = this.tokenSigner.signAccessToken({
@@ -59,6 +86,7 @@ export class RefreshTokenUseCase {
       userId: user.id!,
       tokenHash: newTokenHash,
       familyId,
+      role: user.role,
       isRevoked: false,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
     });

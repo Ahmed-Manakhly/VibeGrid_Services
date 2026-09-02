@@ -9,6 +9,7 @@ export class MongoRefreshTokenRepo implements IRefreshTokenRepo {
       userId: doc.userId,
       tokenHash: doc.tokenHash,
       familyId: doc.familyId,
+      role: doc.role,
       isRevoked: doc.isRevoked,
       expiresAt: doc.expiresAt,
       createdAt: doc.createdAt
@@ -28,6 +29,7 @@ export class MongoRefreshTokenRepo implements IRefreshTokenRepo {
         userId: token.userId,
         tokenHash: token.tokenHash,
         familyId: token.familyId,
+        role: token.role,
         isRevoked: token.isRevoked,
         expiresAt: token.expiresAt
       });

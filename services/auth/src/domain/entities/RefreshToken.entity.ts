@@ -3,6 +3,7 @@ export interface RefreshTokenProps {
   userId: string;
   tokenHash: string;
   familyId: string;
+  role?: string;
   isRevoked: boolean;
   expiresAt: Date;
   createdAt?: Date;
@@ -37,6 +38,10 @@ export class RefreshToken {
 
   public get familyId(): string {
     return this.props.familyId;
+  }
+
+  public get role(): string | undefined {
+    return this.props.role;
   }
 
   public get isRevoked(): boolean {
