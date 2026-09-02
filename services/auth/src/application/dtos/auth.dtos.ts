@@ -19,6 +19,7 @@ export interface AuthTokensDTO {
     email: string;
     name?: string;
     role: string;
+    isEmailVerified?: boolean;
   };
 }
 
@@ -27,4 +28,15 @@ export interface OAuthDTO {
   providerId: string;
   email: string;
   name?: string;
+}
+
+export interface RegisterResultDTO {
+  isVerificationRequired: boolean;
+  user: {
+    id: string;
+    email: string;
+    name?: string;
+    role: string;
+    isEmailVerified: boolean;
+  };
 }

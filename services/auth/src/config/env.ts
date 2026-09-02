@@ -9,6 +9,7 @@ export interface TokenExpiryConfig {
   refreshTokenExpiresInSec: number;
   accessTokenMaxAgeMs: number;
   refreshTokenMaxAgeMs: number;
+  emailVerificationTokenExpiresInSec: number;
 }
 
 export interface AppConfig {
@@ -70,12 +71,16 @@ export function loadAndValidateConfig(): AppConfig {
 
   const accessTokenExpiresInSec = parseInt(process.env.JWT_ACCESS_TOKEN_EXPIRES_IN_SEC || '900', 10);
   const refreshTokenExpiresInSec = parseInt(process.env.JWT_REFRESH_TOKEN_EXPIRES_IN_SEC || '604800', 10);
+  const emailVerificationTokenExpiresInSec = parseInt(process.env.EMAIL_VERIFICATION_TOKEN_EXPIRES_IN_SEC || '900', 10);
 
   if (isNaN(accessTokenExpiresInSec) || accessTokenExpiresInSec <= 0) {
     throw new Error('[Config Error] JWT_ACCESS_TOKEN_EXPIRES_IN_SEC must be a positive integer');
   }
   if (isNaN(refreshTokenExpiresInSec) || refreshTokenExpiresInSec <= 0) {
     throw new Error('[Config Error] JWT_REFRESH_TOKEN_EXPIRES_IN_SEC must be a positive integer');
+  }
+  if (isNaN(emailVerificationTokenExpiresInSec) || emailVerificationTokenExpiresInSec <= 0) {
+    throw new Error('[Config Error] EMAIL_VERIFICATION_TOKEN_EXPIRES_IN_SEC must be a positive integer');
   }
 
   return {
@@ -90,7 +95,8 @@ export function loadAndValidateConfig(): AppConfig {
       accessTokenExpiresInSec,
       refreshTokenExpiresInSec,
       accessTokenMaxAgeMs: accessTokenExpiresInSec * 1000,
-      refreshTokenMaxAgeMs: refreshTokenExpiresInSec * 1000
+      refreshTokenMaxAgeMs: refreshTokenExpiresInSec * 1000,
+      emailVerificationTokenExpiresInSec
     },
     smtp: {
       host: process.env.SMTP_HOST,

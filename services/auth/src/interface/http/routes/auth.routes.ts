@@ -16,6 +16,8 @@ export function createAuthRouter(
   router.post('/logout', asyncHandler(authController.logout));
   router.post('/forgot-password', asyncHandler(authController.forgotPassword));
   router.post('/reset-password', asyncHandler(authController.resetPassword));
+  router.post('/create-email-token', asyncHandler(authController.createEmailToken));
+  router.post('/verify-email', asyncHandler(authController.verifyEmail));
   if (protectMiddleware) {
     router.post('/change-password', protectMiddleware, asyncHandler(authController.changePassword));
     router.get('/me', protectMiddleware, asyncHandler(authController.getMe));

@@ -3,27 +3,21 @@ import { IPasswordHasher } from '../../domain/ports/IPasswordHasher';
 import { IEventPublisher } from '../../domain/ports/IEventPublisher';
 import { UserAuth } from '../../domain/entities/UserAuth.entity';
 import { UserRegisteredEvent } from '../../domain/events/UserRegistered.event';
-import { RegisterDTO, AuthTokensDTO } from '../dtos/auth.dtos';
-import { ITokenSigner } from '../../domain/ports/ITokenSigner';
-import { IRefreshTokenRepo } from '../../domain/ports/IRefreshTokenRepo';
-import { RefreshToken } from '../../domain/entities/RefreshToken.entity';
+import { RegisterDTO, RegisterResultDTO } from '../dtos/auth.dtos';
 import { PasswordComplexityValidator } from '../../domain/value-objects/PasswordComplexityValidator.vo';
 import { EmailValidator } from '../../domain/value-objects/EmailValidator.vo';
-import crypto from 'crypto';
-
+import { SendEmailVerificationTokenUseCase } from './SendEmailVerificationToken.usecase';
 import { DuplicateEmailError, ValidationError } from '../errors/errors';
 
 export class RegisterUserUseCase {
   constructor(
     private userAuthRepo: IUserAuthRepository,
-    private refreshTokenRepo: IRefreshTokenRepo,
     private hasher: IPasswordHasher,
     private eventPublisher: IEventPublisher,
-    private tokenSigner: ITokenSigner,
-    private refreshTokenTTLMs: number = 7 * 24 * 60 * 60 * 1000
+    private sendEmailVerificationTokenUseCase: SendEmailVerificationTokenUseCase
   ) {}
 
-  async execute(dto: RegisterDTO): Promise<AuthTokensDTO> {
+  async execute(dto: RegisterDTO): Promise<RegisterResultDTO> {
     if (!dto.email) {
       throw new ValidationError('Email is required');
     }
@@ -77,31 +71,12 @@ export class RegisterUserUseCase {
       provider: 'local'
     });
 
+    // Save unverified user aggregate
     const savedUser = await this.userAuthRepo.save(newUser);
     const userId = savedUser.id!;
 
-    // Issue RS256 Access Token
-    const accessToken = this.tokenSigner.signAccessToken({
-      sub: userId,
-      email: savedUser.email,
-      role: savedUser.role
-    });
-
-    // Issue Refresh Token & Store in Mongo
-    const familyId = crypto.randomUUID();
-    const rawRefreshToken = crypto.randomBytes(40).toString('hex');
-    const tokenHash = crypto.createHash('sha256').update(rawRefreshToken).digest('hex');
-
-    const refreshTokenEntity = RefreshToken.create({
-      userId,
-      tokenHash,
-      familyId,
-      role: savedUser.role,
-      isRevoked: false,
-      expiresAt: new Date(Date.now() + this.refreshTokenTTLMs)
-    });
-
-    await this.refreshTokenRepo.save(refreshTokenEntity);
+    // Initiate email verification workflow — email failures are NOT swallowed
+    await this.sendEmailVerificationTokenUseCase.execute({ email: savedUser.email });
 
     // Publish Event-Driven Message (Pub/Sub)
     const registeredEvent = new UserRegisteredEvent({
@@ -116,13 +91,13 @@ export class RegisterUserUseCase {
     await this.eventPublisher.publish(registeredEvent.eventName, registeredEvent.payload);
 
     return {
-      accessToken,
-      refreshToken: `${familyId}:${rawRefreshToken}`,
+      isVerificationRequired: true,
       user: {
         id: userId,
         email: savedUser.email,
         name: savedUser.name,
-        role: savedUser.role
+        role: savedUser.role,
+        isEmailVerified: savedUser.isEmailVerified
       }
     };
   }

@@ -1,18 +1,15 @@
 import { RegisterUserUseCase } from '../RegisterUser.usecase';
 import { IUserAuthRepository } from '../../../domain/ports/IUserAuthRepository';
-import { IRefreshTokenRepo } from '../../../domain/ports/IRefreshTokenRepo';
 import { IPasswordHasher } from '../../../domain/ports/IPasswordHasher';
 import { IEventPublisher } from '../../../domain/ports/IEventPublisher';
-import { ITokenSigner } from '../../../domain/ports/ITokenSigner';
 import { UserAuth } from '../../../domain/entities/UserAuth.entity';
 import { ValidationError, DuplicateEmailError } from '../../errors/errors';
 
 describe('RegisterUserUseCase', () => {
   let mockUserAuthRepo: jest.Mocked<IUserAuthRepository>;
-  let mockRefreshTokenRepo: jest.Mocked<IRefreshTokenRepo>;
   let mockHasher: jest.Mocked<IPasswordHasher>;
   let mockEventPublisher: jest.Mocked<IEventPublisher>;
-  let mockTokenSigner: jest.Mocked<ITokenSigner>;
+  let mockSendEmailVerificationTokenUseCase: any;
   let registerUserUseCase: RegisterUserUseCase;
 
   beforeEach(() => {
@@ -25,12 +22,6 @@ describe('RegisterUserUseCase', () => {
       update: jest.fn()
     };
 
-    mockRefreshTokenRepo = {
-      findByTokenHash: jest.fn(),
-      save: jest.fn(),
-      revokeFamily: jest.fn()
-    };
-
     mockHasher = {
       hash: jest.fn().mockResolvedValue('hashed_password_123'),
       verify: jest.fn()
@@ -40,24 +31,21 @@ describe('RegisterUserUseCase', () => {
       publish: jest.fn().mockResolvedValue(undefined)
     };
 
-    mockTokenSigner = {
-      signAccessToken: jest.fn().mockReturnValue('mock_access_token'),
-      verifyAccessToken: jest.fn(),
-      getPublicKey: jest.fn()
+    mockSendEmailVerificationTokenUseCase = {
+      execute: jest.fn().mockResolvedValue({ message: 'Verification OTP code sent to your email' })
     };
 
     registerUserUseCase = new RegisterUserUseCase(
       mockUserAuthRepo,
-      mockRefreshTokenRepo,
       mockHasher,
       mockEventPublisher,
-      mockTokenSigner
+      mockSendEmailVerificationTokenUseCase
     );
   });
 
   const validComplexPassword = 'Password123!';
 
-  it('should successfully register a user with normalized email, matching passwordConfirm, and default CLIENT role', async () => {
+  it('should successfully register a user, trigger email verification workflow, and return RegisterResultDTO', async () => {
     mockUserAuthRepo.findByEmail.mockResolvedValue(null);
     mockUserAuthRepo.save.mockImplementation(async (user: UserAuth) => {
       return UserAuth.create({
@@ -82,9 +70,43 @@ describe('RegisterUserUseCase', () => {
     expect(savedUserArg.email).toBe('test.user@example.com');
     expect(savedUserArg.role).toBe('CLIENT');
 
-    expect(result.accessToken).toBe('mock_access_token');
+    // Verification workflow triggered cleanly via application dependency
+    expect(mockSendEmailVerificationTokenUseCase.execute).toHaveBeenCalledWith({
+      email: 'test.user@example.com'
+    });
+
+    // Clean DTO without fake tokens
+    expect(result.isVerificationRequired).toBe(true);
     expect(result.user.email).toBe('test.user@example.com');
     expect(result.user.role).toBe('CLIENT');
+    expect(result.user.isEmailVerified).toBe(false);
+    expect((result as any).accessToken).toBeUndefined();
+    expect((result as any).refreshToken).toBeUndefined();
+  });
+
+  it('should NOT swallow email verification errors and allow exception propagation', async () => {
+    mockUserAuthRepo.findByEmail.mockResolvedValue(null);
+    mockUserAuthRepo.save.mockImplementation(async (user: UserAuth) => {
+      return UserAuth.create({
+        id: 'user_123',
+        email: user.email,
+        passwordHash: user.passwordHash,
+        name: user.name,
+        role: user.role
+      });
+    });
+
+    mockSendEmailVerificationTokenUseCase.execute.mockRejectedValue(
+      new Error('SMTP service unavailable')
+    );
+
+    await expect(
+      registerUserUseCase.execute({
+        email: 'test@example.com',
+        password: validComplexPassword,
+        passwordConfirm: validComplexPassword
+      })
+    ).rejects.toThrow('SMTP service unavailable');
   });
 
   it('should throw ValidationError if password and passwordConfirm do not match', async () => {

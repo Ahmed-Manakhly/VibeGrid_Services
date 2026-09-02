@@ -54,6 +54,7 @@ describe('AuthenticateUseCase — Brute-Force Lockout', () => {
     passwordHash: 'hashed_secret_password',
     role: 'CLIENT',
     isActive: true,
+    isEmailVerified: true,
     failedAttempts: 0
   });
 
@@ -68,6 +69,27 @@ describe('AuthenticateUseCase — Brute-Force Lockout', () => {
 
     expect(result.accessToken).toBe('mock_access_token');
     expect(result.user.id).toBe('user_123');
+  });
+
+  it('should reject login for unverified local accounts with UnauthorizedError', async () => {
+    const unverifiedUser = UserAuth.create({
+      id: 'user_999',
+      email: 'unverified@example.com',
+      passwordHash: 'hashed_secret_password',
+      role: 'CLIENT',
+      isActive: true,
+      isEmailVerified: false
+    });
+
+    mockUserAuthRepo.findByEmail.mockResolvedValue(unverifiedUser);
+    mockHasher.verify.mockResolvedValue(true);
+
+    await expect(
+      authenticateUseCase.execute({
+        email: 'unverified@example.com',
+        password: 'CorrectPassword123!'
+      })
+    ).rejects.toThrow();
   });
 
   it('should increment failedAttempts on wrong password and throw InvalidCredentialsError', async () => {
@@ -145,6 +167,7 @@ describe('AuthenticateUseCase — Brute-Force Lockout', () => {
       passwordHash: 'hashed_secret_password',
       role: 'CLIENT',
       isActive: true,
+      isEmailVerified: true,
       failedAttempts: 10,
       lockoutUntil: new Date(Date.now() - 60 * 1000) // Expired 1 min ago
     });
@@ -171,6 +194,7 @@ describe('AuthenticateUseCase — Brute-Force Lockout', () => {
       passwordHash: 'hashed_secret_password',
       role: 'CLIENT',
       isActive: true,
+      isEmailVerified: true,
       failedAttempts: 5
     });
 

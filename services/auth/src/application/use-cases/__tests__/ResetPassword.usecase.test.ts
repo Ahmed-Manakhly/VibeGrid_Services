@@ -54,7 +54,7 @@ describe('ResetPasswordUseCase — Lockout Clearing', () => {
 
   const validEmailToken = EmailToken.create({
     email,
-    emailToken: 'hashed_otp_token',
+    tokenHash: 'hashed_otp_token',
     expiresAt: new Date(Date.now() + 10 * 60 * 1000)
   });
 

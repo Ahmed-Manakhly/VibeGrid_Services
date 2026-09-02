@@ -41,6 +41,9 @@ export interface ServiceContainer {
   adminCreateUserUseCase: AdminCreateUserUseCase;
 }
 
+import { VerifyEmailUseCase } from '../application/use-cases/VerifyEmail.usecase';
+import { SendEmailVerificationTokenUseCase } from '../application/use-cases/SendEmailVerificationToken.usecase';
+
 export function createContainer(config: AppConfig, eventPublisher: RabbitMQPublisher): ServiceContainer {
   // Repositories & Adapters
   const userAuthRepo = new MongoUserAuthRepo();
@@ -56,13 +59,19 @@ export function createContainer(config: AppConfig, eventPublisher: RabbitMQPubli
   );
 
   // Use Cases
+  const verifyEmailUseCase = new VerifyEmailUseCase(userAuthRepo, emailTokenRepo);
+  const sendEmailVerificationTokenUseCase = new SendEmailVerificationTokenUseCase(
+    userAuthRepo,
+    emailTokenRepo,
+    emailSender,
+    config.tokenExpiry.emailVerificationTokenExpiresInSec
+  );
+
   const registerUserUseCase = new RegisterUserUseCase(
     userAuthRepo,
-    refreshTokenRepo,
     hasher,
     eventPublisher,
-    tokenSigner,
-    config.tokenExpiry.refreshTokenMaxAgeMs
+    sendEmailVerificationTokenUseCase
   );
 
   const authenticateUseCase = new AuthenticateUseCase(
@@ -141,7 +150,9 @@ export function createContainer(config: AppConfig, eventPublisher: RabbitMQPubli
     updateMeUseCase,
     validateTokenGuardUseCase,
     tokenSigner,
-    config.tokenExpiry
+    config.tokenExpiry,
+    verifyEmailUseCase,
+    sendEmailVerificationTokenUseCase
   );
 
   const oauthController = new OAuthController(oauthLoginUseCase, config.tokenExpiry);

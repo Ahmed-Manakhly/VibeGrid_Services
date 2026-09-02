@@ -7,7 +7,7 @@ export class MongoEmailTokenRepo implements IEmailTokenRepository {
     return EmailToken.create({
       id: doc._id.toString(),
       email: doc.email,
-      emailToken: doc.emailToken,
+      tokenHash: doc.tokenHash,
       expiresAt: doc.expiresAt,
       createdAt: doc.createdAt
     });
@@ -18,7 +18,7 @@ export class MongoEmailTokenRepo implements IEmailTokenRepository {
       { email: emailToken.email },
       {
         email: emailToken.email,
-        emailToken: emailToken.emailToken,
+        tokenHash: emailToken.tokenHash,
         expiresAt: emailToken.expiresAt
       },
       { upsert: true, new: true }

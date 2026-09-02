@@ -14,6 +14,9 @@ import { TokenExpiryConfig } from '../../../config/env';
 import { ValidationError, UnauthorizedError } from '../../../application/errors/errors';
 import { sendSuccess } from '../response/apiResponse';
 
+import { VerifyEmailUseCase } from '../../../application/use-cases/VerifyEmail.usecase';
+import { SendEmailVerificationTokenUseCase } from '../../../application/use-cases/SendEmailVerificationToken.usecase';
+
 export class AuthController {
   constructor(
     private registerUserUseCase: RegisterUserUseCase,
@@ -31,8 +34,11 @@ export class AuthController {
       accessTokenExpiresInSec: 900,
       refreshTokenExpiresInSec: 604800,
       accessTokenMaxAgeMs: 15 * 60 * 1000,
-      refreshTokenMaxAgeMs: 7 * 24 * 60 * 60 * 1000
-    }
+      refreshTokenMaxAgeMs: 7 * 24 * 60 * 60 * 1000,
+      emailVerificationTokenExpiresInSec: 900
+    },
+    private verifyEmailUseCase?: VerifyEmailUseCase,
+    private sendEmailVerificationTokenUseCase?: SendEmailVerificationTokenUseCase
   ) { }
 
   private setCookies(res: Response, accessToken: string, refreshToken: string): void {
@@ -63,18 +69,19 @@ export class AuthController {
     }
 
     const result = await this.registerUserUseCase.execute({ email, password, passwordConfirm, name, role });
-    this.setCookies(res, result.accessToken, result.refreshToken);
 
     sendSuccess(
       res,
       201,
       {
-        message: 'User registered successfully',
+        message: 'User registered successfully. Please check your email to verify your account.',
+        isVerificationRequired: result.isVerificationRequired,
         user: {
           id: result.user.id,
           email: result.user.email,
           name: result.user.name,
-          role: result.user.role
+          role: result.user.role,
+          isEmailVerified: result.user.isEmailVerified
         }
       }
     );
@@ -169,6 +176,34 @@ export class AuthController {
       newPassword,
       confirmPassword
     });
+    sendSuccess(res, 200, result);
+  };
+
+  createEmailToken = async (req: Request, res: Response): Promise<void> => {
+    const { email } = req.body;
+    if (!email) {
+      throw new ValidationError('Email is required');
+    }
+
+    if (!this.sendEmailVerificationTokenUseCase) {
+      throw new Error('Email verification service is not initialized');
+    }
+
+    const result = await this.sendEmailVerificationTokenUseCase.execute({ email });
+    sendSuccess(res, 200, result);
+  };
+
+  verifyEmail = async (req: Request, res: Response): Promise<void> => {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      throw new ValidationError('Email and OTP code are required');
+    }
+
+    if (!this.verifyEmailUseCase) {
+      throw new Error('Email verification service is not initialized');
+    }
+
+    const result = await this.verifyEmailUseCase.execute({ email, otp });
     sendSuccess(res, 200, result);
   };
 

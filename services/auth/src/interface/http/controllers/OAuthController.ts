@@ -11,7 +11,8 @@ export class OAuthController {
       accessTokenExpiresInSec: 900,
       refreshTokenExpiresInSec: 604800,
       accessTokenMaxAgeMs: 15 * 60 * 1000,
-      refreshTokenMaxAgeMs: 7 * 24 * 60 * 60 * 1000
+      refreshTokenMaxAgeMs: 7 * 24 * 60 * 60 * 1000,
+      emailVerificationTokenExpiresInSec: 900
     }
   ) {}
 

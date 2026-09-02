@@ -42,9 +42,8 @@ describe('AuthController Response Contract & Cookie Issuance', () => {
   beforeEach(() => {
     mockRegisterUseCase = {
       execute: jest.fn().mockResolvedValue({
-        accessToken: 'access_jwt_xyz',
-        refreshToken: 'family_1:raw_refresh_xyz',
-        user: { id: 'u1', email: 'user@example.com', name: 'User One', role: 'CLIENT' }
+        isVerificationRequired: true,
+        user: { id: 'u1', email: 'user@example.com', name: 'User One', role: 'CLIENT', isEmailVerified: false }
       })
     };
 
@@ -99,12 +98,14 @@ describe('AuthController Response Contract & Cookie Issuance', () => {
     expect(res.body).toEqual({
       status: 'success',
       data: {
-        message: 'User registered successfully',
+        message: 'User registered successfully. Please check your email to verify your account.',
+        isVerificationRequired: true,
         user: {
           id: 'u1',
           email: 'user@example.com',
           name: 'User One',
-          role: 'CLIENT'
+          role: 'CLIENT',
+          isEmailVerified: false
         }
       }
     });
@@ -114,18 +115,6 @@ describe('AuthController Response Contract & Cookie Issuance', () => {
     expect(res.body.data.refreshToken).toBeUndefined();
     expect(res.body.data.user.passwordHash).toBeUndefined();
     expect(res.body.data.user.failedAttempts).toBeUndefined();
-
-    // Ensure HttpOnly cookies are set correctly
-    expect(res.cookie).toHaveBeenCalledWith(
-      'access_token',
-      'access_jwt_xyz',
-      expect.objectContaining({ httpOnly: true, sameSite: 'strict' })
-    );
-    expect(res.cookie).toHaveBeenCalledWith(
-      'refresh_token',
-      'family_1:raw_refresh_xyz',
-      expect.objectContaining({ httpOnly: true, sameSite: 'strict' })
-    );
   });
 
   it('should return standardized success JSON without tokens or sensitive fields for login and issue HttpOnly cookies', async () => {

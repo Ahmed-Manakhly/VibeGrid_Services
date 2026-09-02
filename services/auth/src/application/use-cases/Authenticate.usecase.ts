@@ -6,7 +6,7 @@ import { ITokenSigner } from '../../domain/ports/ITokenSigner';
 import { RefreshToken } from '../../domain/entities/RefreshToken.entity';
 import crypto from 'crypto';
 
-import { InvalidCredentialsError, AccountLockedError } from '../errors/errors';
+import { InvalidCredentialsError, AccountLockedError, UnauthorizedError } from '../errors/errors';
 
 export class AuthenticateUseCase {
   constructor(
@@ -53,6 +53,11 @@ export class AuthenticateUseCase {
       }
 
       throw new InvalidCredentialsError('Invalid email or password');
+    }
+
+    // 5. Email verification check for local accounts
+    if (user.provider === 'local' && !user.isEmailVerified) {
+      throw new UnauthorizedError('Email address is not verified. Please verify your email before logging in.');
     }
 
     // 5. Reset lockout state on successful authentication if previously incremented or auto-unlocked

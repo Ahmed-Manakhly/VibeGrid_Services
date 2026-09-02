@@ -21,7 +21,8 @@ export class NodemailerEmailSender implements IEmailSender {
       from,
       to: payload.to,
       subject: payload.subject,
-      html: payload.html
+      html: payload.html,
+      text: payload.text
     });
   }
 }

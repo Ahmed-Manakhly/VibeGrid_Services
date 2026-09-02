@@ -7,6 +7,8 @@ export interface UserAuthProps {
   providerId?: string;
   role?: string;
   isActive?: boolean;
+  isEmailVerified?: boolean;
+  emailVerifiedAt?: Date | null;
   passwordChangedAt?: Date;
   failedAttempts?: number;
   lockoutUntil?: Date | null;
@@ -19,11 +21,15 @@ export class UserAuth {
   private props: UserAuthProps;
 
   private constructor(props: UserAuthProps) {
+    const isOAuth = props.provider && props.provider !== 'local';
+    const isVerified = props.isEmailVerified !== undefined ? props.isEmailVerified : (isOAuth ? true : false);
     this.props = {
       ...props,
       provider: props.provider || 'local',
       role: props.role || 'USER',
       isActive: props.isActive !== undefined ? props.isActive : true,
+      isEmailVerified: isVerified,
+      emailVerifiedAt: props.emailVerifiedAt !== undefined ? props.emailVerifiedAt : (isVerified ? new Date() : null),
       failedAttempts: props.failedAttempts ?? 0,
       lockoutUntil: props.lockoutUntil ?? undefined,
       deletedAt: props.deletedAt ?? undefined,
@@ -67,6 +73,20 @@ export class UserAuth {
 
   public get isActive(): boolean {
     return this.props.isActive !== undefined ? this.props.isActive : true;
+  }
+
+  public get isEmailVerified(): boolean {
+    return !!this.props.isEmailVerified;
+  }
+
+  public get emailVerifiedAt(): Date | undefined | null {
+    return this.props.emailVerifiedAt;
+  }
+
+  public verifyEmail(now: Date = new Date()): void {
+    this.props.isEmailVerified = true;
+    this.props.emailVerifiedAt = now;
+    this.props.updatedAt = now;
   }
 
   public get failedAttempts(): number {

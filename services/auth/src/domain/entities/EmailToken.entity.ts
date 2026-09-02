@@ -1,7 +1,7 @@
 export interface EmailTokenProps {
   id?: string;
   email: string;
-  emailToken: string; // Hashed OTP
+  tokenHash: string; // SHA-256 Hashed OTP
   expiresAt: Date;
   createdAt?: Date;
 }
@@ -28,8 +28,13 @@ export class EmailToken {
     return this.props.email;
   }
 
+  public get tokenHash(): string {
+    return this.props.tokenHash;
+  }
+
+  // Alias for backward compatibility
   public get emailToken(): string {
-    return this.props.emailToken;
+    return this.props.tokenHash;
   }
 
   public get expiresAt(): Date {

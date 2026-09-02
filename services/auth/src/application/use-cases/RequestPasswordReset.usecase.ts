@@ -49,7 +49,7 @@ export class RequestPasswordResetUseCase {
     // 5. Save EmailToken entity
     const emailTokenEntity = EmailToken.create({
       email,
-      emailToken: hashedOtp,
+      tokenHash: hashedOtp,
       expiresAt
     });
 
