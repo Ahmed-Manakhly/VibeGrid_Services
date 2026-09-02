@@ -22,13 +22,42 @@ export class AuthenticateUseCase {
       throw new InvalidCredentialsError('Invalid email or password');
     }
 
+    const now = new Date();
+    let wasLockoutReset = false;
+
+    // 1. Lockout check (reject if active lock)
+    if (user.isLockedOut(now)) {
+      throw new AccountLockedError('Account is locked due to too many failed attempts. Please try again later.');
+    }
+
+    // 2. Auto-unlock if lockout timer has expired
+    if (user.lockoutUntil && user.lockoutUntil <= now) {
+      user.resetLockout();
+      wasLockoutReset = true;
+    }
+
+    // 3. Active status check
     if (!user.isActive) {
       throw new AccountLockedError('Account is locked. Please contact support.');
     }
 
+    // 4. Password verification
     const isValid = await this.hasher.verify(dto.password, user.passwordHash);
     if (!isValid) {
+      user.recordFailedAttempt(now);
+      await this.userAuthRepo.save(user);
+
+      if (user.isLockedOut(now)) {
+        throw new AccountLockedError('Account has been locked due to 10 failed login attempts. Please try again in 15 minutes.');
+      }
+
       throw new InvalidCredentialsError('Invalid email or password');
+    }
+
+    // 5. Reset lockout state on successful authentication if previously incremented or auto-unlocked
+    if (wasLockoutReset || user.failedAttempts > 0 || user.lockoutUntil) {
+      user.resetLockout();
+      await this.userAuthRepo.save(user);
     }
 
     const userId = user.id!;

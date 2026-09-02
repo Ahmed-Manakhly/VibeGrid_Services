@@ -14,6 +14,8 @@ export class MongoUserAuthRepo implements IUserAuthRepository {
       role: doc.role,
       isActive: doc.isActive,
       passwordChangedAt: doc.passwordChangedAt,
+      failedAttempts: doc.failedAttempts,
+      lockoutUntil: doc.lockoutUntil,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt
     });
@@ -72,7 +74,9 @@ export class MongoUserAuthRepo implements IUserAuthRepository {
           providerId: userAuth.providerId,
           role: userAuth.role,
           isActive: userAuth.isActive,
-          passwordChangedAt: userAuth.passwordChangedAt
+          passwordChangedAt: userAuth.passwordChangedAt,
+          failedAttempts: userAuth.failedAttempts,
+          lockoutUntil: userAuth.lockoutUntil
         },
         { new: true }
       ).exec();
@@ -87,7 +91,9 @@ export class MongoUserAuthRepo implements IUserAuthRepository {
       providerId: userAuth.providerId,
       role: userAuth.role,
       isActive: userAuth.isActive,
-      passwordChangedAt: userAuth.passwordChangedAt
+      passwordChangedAt: userAuth.passwordChangedAt,
+      failedAttempts: userAuth.failedAttempts,
+      lockoutUntil: userAuth.lockoutUntil
     });
     return this.toDomain(doc);
   }

@@ -8,6 +8,8 @@ export interface UserAuthProps {
   role?: string;
   isActive?: boolean;
   passwordChangedAt?: Date;
+  failedAttempts?: number;
+  lockoutUntil?: Date | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -21,6 +23,8 @@ export class UserAuth {
       provider: props.provider || 'local',
       role: props.role || 'USER',
       isActive: props.isActive !== undefined ? props.isActive : true,
+      failedAttempts: props.failedAttempts ?? 0,
+      lockoutUntil: props.lockoutUntil ?? undefined,
       passwordChangedAt: props.passwordChangedAt,
       createdAt: props.createdAt || new Date(),
       updatedAt: props.updatedAt || new Date()
@@ -63,6 +67,14 @@ export class UserAuth {
     return this.props.isActive !== undefined ? this.props.isActive : true;
   }
 
+  public get failedAttempts(): number {
+    return this.props.failedAttempts || 0;
+  }
+
+  public get lockoutUntil(): Date | undefined {
+    return this.props.lockoutUntil || undefined;
+  }
+
   public get passwordChangedAt(): Date | undefined {
     return this.props.passwordChangedAt;
   }
@@ -73,6 +85,29 @@ export class UserAuth {
 
   public get updatedAt(): Date {
     return this.props.updatedAt || new Date();
+  }
+
+  public isLockedOut(now: Date = new Date()): boolean {
+    if (this.props.lockoutUntil && now < this.props.lockoutUntil) {
+      return true;
+    }
+    return false;
+  }
+
+  public recordFailedAttempt(now: Date = new Date()): void {
+    const currentAttempts = (this.props.failedAttempts || 0) + 1;
+    this.props.failedAttempts = currentAttempts;
+
+    if (currentAttempts >= 10) {
+      this.props.lockoutUntil = new Date(now.getTime() + 15 * 60 * 1000);
+    }
+    this.props.updatedAt = new Date();
+  }
+
+  public resetLockout(): void {
+    this.props.failedAttempts = 0;
+    this.props.lockoutUntil = undefined;
+    this.props.updatedAt = new Date();
   }
 
   public updatePassword(newPasswordHash: string, changedAt: Date = new Date()): void {

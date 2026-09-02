@@ -9,6 +9,8 @@ export interface IUserAuthDocument extends Document {
   role: string;
   isActive: boolean;
   passwordChangedAt?: Date;
+  failedAttempts: number;
+  lockoutUntil?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -22,7 +24,9 @@ const UserAuthSchema = new Schema<IUserAuthDocument>(
     providerId: { type: String, index: true },
     role: { type: String, required: true, default: 'USER' },
     isActive: { type: Boolean, default: true },
-    passwordChangedAt: { type: Date }
+    passwordChangedAt: { type: Date },
+    failedAttempts: { type: Number, default: 0 },
+    lockoutUntil: { type: Date }
   },
   { timestamps: true }
 );
