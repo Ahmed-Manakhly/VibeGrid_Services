@@ -129,6 +129,16 @@ describe('RegisterUserUseCase', () => {
     ).rejects.toThrow(ValidationError);
   });
 
+  it('should throw ValidationError if email is malformed', async () => {
+    await expect(
+      registerUserUseCase.execute({
+        email: 'invalid-email-format',
+        password: validComplexPassword,
+        passwordConfirm: validComplexPassword
+      })
+    ).rejects.toThrow(ValidationError);
+  });
+
   it('should throw DuplicateEmailError if normalized email is already registered', async () => {
     mockUserAuthRepo.findByEmail.mockResolvedValue(
       UserAuth.create({ id: 'existing_1', email: 'test@example.com' })

@@ -8,6 +8,7 @@ import { ITokenSigner } from '../../domain/ports/ITokenSigner';
 import { IRefreshTokenRepo } from '../../domain/ports/IRefreshTokenRepo';
 import { RefreshToken } from '../../domain/entities/RefreshToken.entity';
 import { PasswordComplexityValidator } from '../../domain/value-objects/PasswordComplexityValidator.vo';
+import { EmailValidator } from '../../domain/value-objects/EmailValidator.vo';
 import crypto from 'crypto';
 
 import { DuplicateEmailError, ValidationError } from '../errors/errors';
@@ -27,6 +28,11 @@ export class RegisterUserUseCase {
     }
 
     const normalizedEmail = dto.email.trim().toLowerCase();
+
+    const emailValidation = EmailValidator.validate(normalizedEmail);
+    if (!emailValidation.isValid) {
+      throw new ValidationError(emailValidation.error || 'Invalid email format');
+    }
 
     if (!dto.password || !dto.passwordConfirm) {
       throw new ValidationError('Password and password confirmation are required');
