@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL (Primary Relational Store for Next.js BFF & Outbox)
   vibegrid_postgres:
@@ -149,7 +147,7 @@ services:
 networks:
   vibegrid_net:
     name: vibegrid_net
-    driver: bridge
+    external: true
 
 volumes:
   postgres_data:
