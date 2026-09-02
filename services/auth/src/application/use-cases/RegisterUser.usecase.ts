@@ -1,12 +1,12 @@
 import { IUserAuthRepository } from '../../domain/ports/IUserAuthRepository';
 import { IPasswordHasher } from '../../domain/ports/IPasswordHasher';
 import { IEventPublisher } from '../../domain/ports/IEventPublisher';
+import { IEmailVerificationService } from '../../domain/ports/IEmailVerificationService';
 import { UserAuth } from '../../domain/entities/UserAuth.entity';
 import { UserRegisteredEvent } from '../../domain/events/UserRegistered.event';
 import { RegisterDTO, RegisterResultDTO } from '../dtos/auth.dtos';
 import { PasswordComplexityValidator } from '../../domain/value-objects/PasswordComplexityValidator.vo';
 import { EmailValidator } from '../../domain/value-objects/EmailValidator.vo';
-import { SendEmailVerificationTokenUseCase } from './SendEmailVerificationToken.usecase';
 import { DuplicateEmailError, ValidationError } from '../errors/errors';
 
 export class RegisterUserUseCase {
@@ -14,7 +14,7 @@ export class RegisterUserUseCase {
     private userAuthRepo: IUserAuthRepository,
     private hasher: IPasswordHasher,
     private eventPublisher: IEventPublisher,
-    private sendEmailVerificationTokenUseCase: SendEmailVerificationTokenUseCase
+    private emailVerificationService: IEmailVerificationService
   ) {}
 
   async execute(dto: RegisterDTO): Promise<RegisterResultDTO> {
@@ -76,7 +76,7 @@ export class RegisterUserUseCase {
     const userId = savedUser.id!;
 
     // Initiate email verification workflow — email failures are NOT swallowed
-    await this.sendEmailVerificationTokenUseCase.execute({ email: savedUser.email });
+    await this.emailVerificationService.execute({ email: savedUser.email });
 
     // Publish Event-Driven Message (Pub/Sub)
     const registeredEvent = new UserRegisteredEvent({

@@ -2,6 +2,7 @@ import { RegisterUserUseCase } from '../RegisterUser.usecase';
 import { IUserAuthRepository } from '../../../domain/ports/IUserAuthRepository';
 import { IPasswordHasher } from '../../../domain/ports/IPasswordHasher';
 import { IEventPublisher } from '../../../domain/ports/IEventPublisher';
+import { IEmailVerificationService } from '../../../domain/ports/IEmailVerificationService';
 import { UserAuth } from '../../../domain/entities/UserAuth.entity';
 import { ValidationError, DuplicateEmailError } from '../../errors/errors';
 
@@ -9,7 +10,7 @@ describe('RegisterUserUseCase', () => {
   let mockUserAuthRepo: jest.Mocked<IUserAuthRepository>;
   let mockHasher: jest.Mocked<IPasswordHasher>;
   let mockEventPublisher: jest.Mocked<IEventPublisher>;
-  let mockSendEmailVerificationTokenUseCase: any;
+  let mockEmailVerificationService: jest.Mocked<IEmailVerificationService>;
   let registerUserUseCase: RegisterUserUseCase;
 
   beforeEach(() => {
@@ -31,7 +32,7 @@ describe('RegisterUserUseCase', () => {
       publish: jest.fn().mockResolvedValue(undefined)
     };
 
-    mockSendEmailVerificationTokenUseCase = {
+    mockEmailVerificationService = {
       execute: jest.fn().mockResolvedValue({ message: 'Verification OTP code sent to your email' })
     };
 
@@ -39,7 +40,7 @@ describe('RegisterUserUseCase', () => {
       mockUserAuthRepo,
       mockHasher,
       mockEventPublisher,
-      mockSendEmailVerificationTokenUseCase
+      mockEmailVerificationService
     );
   });
 
@@ -71,7 +72,7 @@ describe('RegisterUserUseCase', () => {
     expect(savedUserArg.role).toBe('CLIENT');
 
     // Verification workflow triggered cleanly via application dependency
-    expect(mockSendEmailVerificationTokenUseCase.execute).toHaveBeenCalledWith({
+    expect(mockEmailVerificationService.execute).toHaveBeenCalledWith({
       email: 'test.user@example.com'
     });
 
@@ -96,7 +97,7 @@ describe('RegisterUserUseCase', () => {
       });
     });
 
-    mockSendEmailVerificationTokenUseCase.execute.mockRejectedValue(
+    mockEmailVerificationService.execute.mockRejectedValue(
       new Error('SMTP service unavailable')
     );
 

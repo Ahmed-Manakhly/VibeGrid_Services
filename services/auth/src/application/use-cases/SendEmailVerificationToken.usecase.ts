@@ -1,16 +1,17 @@
 import { IUserAuthRepository } from '../../domain/ports/IUserAuthRepository';
 import { IEmailTokenRepository } from '../../domain/ports/IEmailTokenRepository';
 import { IEmailSender } from '../../domain/ports/IEmailSender';
+import { IEmailVerificationService, SendEmailVerificationInput } from '../../domain/ports/IEmailVerificationService';
 import { EmailToken } from '../../domain/entities/EmailToken.entity';
 import { EmailValidator } from '../../domain/value-objects/EmailValidator.vo';
 import { ValidationError, UserNotFoundError } from '../errors/errors';
 import crypto from 'crypto';
 
-export interface SendEmailVerificationInputDTO {
+export interface SendEmailVerificationInputDTO extends SendEmailVerificationInput {
   email: string;
 }
 
-export class SendEmailVerificationTokenUseCase {
+export class SendEmailVerificationTokenUseCase implements IEmailVerificationService {
   constructor(
     private userAuthRepo: IUserAuthRepository,
     private emailTokenRepo: IEmailTokenRepository,
