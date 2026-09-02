@@ -8,7 +8,11 @@ export class RS256TokenSigner implements ITokenSigner {
   private privateKey: string;
   private publicKey: string;
 
-  constructor(privateKeyPath?: string, publicKeyPath?: string) {
+  constructor(
+    privateKeyPath?: string,
+    publicKeyPath?: string,
+    private accessTokenExpiresInSec: number = 900
+  ) {
     const defaultPrivatePath = path.resolve(__dirname, '../../../secrets/jwt.private.key');
     const defaultPublicPath = path.resolve(__dirname, '../../../secrets/jwt.public.key');
 
@@ -26,7 +30,7 @@ export class RS256TokenSigner implements ITokenSigner {
   public signAccessToken(payload: { sub: string; email: string; role: string }): string {
     return jwt.sign(payload, this.privateKey, {
       algorithm: 'RS256',
-      expiresIn: '15m',
+      expiresIn: this.accessTokenExpiresInSec,
       issuer: 'vibegrid-auth-service'
     });
   }

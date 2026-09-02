@@ -10,6 +10,7 @@ import { GetMeUseCase } from '../../../application/use-cases/GetMe.usecase';
 import { UpdateMeUseCase } from '../../../application/use-cases/UpdateMe.usecase';
 import { ValidateTokenGuardUseCase } from '../../../application/use-cases/ValidateTokenGuard.usecase';
 import { ITokenSigner } from '../../../domain/ports/ITokenSigner';
+import { TokenExpiryConfig } from '../../../config/env';
 import { ValidationError, UnauthorizedError } from '../../../application/errors/errors';
 import { ApiResponse } from '../response/apiResponse';
 
@@ -25,7 +26,13 @@ export class AuthController {
     private getMeUseCase: GetMeUseCase,
     private updateMeUseCase: UpdateMeUseCase,
     private validateTokenGuardUseCase: ValidateTokenGuardUseCase,
-    private tokenSigner: ITokenSigner
+    private tokenSigner: ITokenSigner,
+    private tokenExpiry: TokenExpiryConfig = {
+      accessTokenExpiresInSec: 900,
+      refreshTokenExpiresInSec: 604800,
+      accessTokenMaxAgeMs: 15 * 60 * 1000,
+      refreshTokenMaxAgeMs: 7 * 24 * 60 * 60 * 1000
+    }
   ) { }
 
   private setCookies(res: Response, accessToken: string, refreshToken: string): void {
@@ -37,7 +44,7 @@ export class AuthController {
       secure: isProd,
       sameSite: 'strict',
       domain,
-      maxAge: 15 * 60 * 1000 // 15 mins
+      maxAge: this.tokenExpiry.accessTokenMaxAgeMs
     });
 
     res.cookie('refresh_token', refreshToken, {
@@ -45,7 +52,7 @@ export class AuthController {
       secure: isProd,
       sameSite: 'strict',
       domain,
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      maxAge: this.tokenExpiry.refreshTokenMaxAgeMs
     });
   }
 
@@ -110,7 +117,7 @@ export class AuthController {
         await this.revokeTokenUseCase.execute({
           token: accessToken,
           type: 'ACCESS',
-          expiresAt: new Date(Date.now() + 15 * 60 * 1000)
+          expiresAt: new Date(Date.now() + this.tokenExpiry.accessTokenMaxAgeMs)
         });
       }
 
@@ -118,7 +125,7 @@ export class AuthController {
         await this.revokeTokenUseCase.execute({
           token: refreshToken,
           type: 'REFRESH',
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+          expiresAt: new Date(Date.now() + this.tokenExpiry.refreshTokenMaxAgeMs)
         });
       }
     } catch (err) {

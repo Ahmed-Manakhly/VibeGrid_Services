@@ -2,9 +2,18 @@ import { Request, Response } from 'express';
 import { OAuthLoginUseCase } from '../../../application/use-cases/OAuthLogin.usecase';
 import { ValidationError } from '../../../application/errors/errors';
 import { ApiResponse } from '../response/apiResponse';
+import { TokenExpiryConfig } from '../../../config/env';
 
 export class OAuthController {
-  constructor(private oauthLoginUseCase: OAuthLoginUseCase) {}
+  constructor(
+    private oauthLoginUseCase: OAuthLoginUseCase,
+    private tokenExpiry: TokenExpiryConfig = {
+      accessTokenExpiresInSec: 900,
+      refreshTokenExpiresInSec: 604800,
+      accessTokenMaxAgeMs: 15 * 60 * 1000,
+      refreshTokenMaxAgeMs: 7 * 24 * 60 * 60 * 1000
+    }
+  ) {}
 
   googleLogin = (req: Request, res: Response): void => {
     const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -36,8 +45,16 @@ export class OAuthController {
     });
 
     const isProd = process.env.NODE_ENV === 'production';
-    res.cookie('access_token', result.accessToken, { httpOnly: true, secure: isProd });
-    res.cookie('refresh_token', result.refreshToken, { httpOnly: true, secure: isProd });
+    res.cookie('access_token', result.accessToken, {
+      httpOnly: true,
+      secure: isProd,
+      maxAge: this.tokenExpiry.accessTokenMaxAgeMs
+    });
+    res.cookie('refresh_token', result.refreshToken, {
+      httpOnly: true,
+      secure: isProd,
+      maxAge: this.tokenExpiry.refreshTokenMaxAgeMs
+    });
 
     ApiResponse.success(res, { message: 'Google OAuth login successful', user: result.user });
   };
@@ -71,8 +88,16 @@ export class OAuthController {
     });
 
     const isProd = process.env.NODE_ENV === 'production';
-    res.cookie('access_token', result.accessToken, { httpOnly: true, secure: isProd });
-    res.cookie('refresh_token', result.refreshToken, { httpOnly: true, secure: isProd });
+    res.cookie('access_token', result.accessToken, {
+      httpOnly: true,
+      secure: isProd,
+      maxAge: this.tokenExpiry.accessTokenMaxAgeMs
+    });
+    res.cookie('refresh_token', result.refreshToken, {
+      httpOnly: true,
+      secure: isProd,
+      maxAge: this.tokenExpiry.refreshTokenMaxAgeMs
+    });
 
     ApiResponse.success(res, { message: 'GitHub OAuth login successful', user: result.user });
   };

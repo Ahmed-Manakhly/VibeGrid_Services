@@ -13,7 +13,8 @@ export class AuthenticateUseCase {
     private userAuthRepo: IUserAuthRepository,
     private refreshTokenRepo: IRefreshTokenRepo,
     private hasher: IPasswordHasher,
-    private tokenSigner: ITokenSigner
+    private tokenSigner: ITokenSigner,
+    private refreshTokenTTLMs: number = 7 * 24 * 60 * 60 * 1000
   ) {}
 
   async execute(dto: LoginDTO): Promise<AuthTokensDTO> {
@@ -80,7 +81,7 @@ export class AuthenticateUseCase {
       familyId,
       role: user.role,
       isRevoked: false,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      expiresAt: new Date(Date.now() + this.refreshTokenTTLMs)
     });
 
     await this.refreshTokenRepo.save(refreshTokenEntity);

@@ -23,7 +23,9 @@ export class ChangePasswordUseCase {
     private userAuthRepo: IUserAuthRepository,
     private hasher: IPasswordHasher,
     private revokedTokenRepo: IRevokedTokenRepository,
-    private refreshTokenRepo?: IRefreshTokenRepo
+    private refreshTokenRepo?: IRefreshTokenRepo,
+    private accessTokenTTLMs: number = 15 * 60 * 1000,
+    private refreshTokenTTLMs: number = 7 * 24 * 60 * 60 * 1000
   ) {}
 
   public async execute(input: ChangePasswordInputDTO): Promise<void> {
@@ -66,7 +68,7 @@ export class ChangePasswordUseCase {
       const accessRevocation = RevokedToken.create({
         token: input.accessToken,
         type: 'ACCESS',
-        expiresAt: input.accessTokenExpiresAt || new Date(Date.now() + 15 * 60 * 1000)
+        expiresAt: input.accessTokenExpiresAt || new Date(Date.now() + this.accessTokenTTLMs)
       });
       await this.revokedTokenRepo.revoke(accessRevocation);
     }
@@ -76,7 +78,7 @@ export class ChangePasswordUseCase {
       const refreshRevocation = RevokedToken.create({
         token: input.refreshToken,
         type: 'REFRESH',
-        expiresAt: input.refreshTokenExpiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        expiresAt: input.refreshTokenExpiresAt || new Date(Date.now() + this.refreshTokenTTLMs)
       });
       await this.revokedTokenRepo.revoke(refreshRevocation);
 

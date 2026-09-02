@@ -4,6 +4,13 @@ import fs from 'fs';
 
 dotenv.config();
 
+export interface TokenExpiryConfig {
+  accessTokenExpiresInSec: number;
+  refreshTokenExpiresInSec: number;
+  accessTokenMaxAgeMs: number;
+  refreshTokenMaxAgeMs: number;
+}
+
 export interface AppConfig {
   port: number;
   nodeEnv: 'development' | 'production' | 'test' | 'docker_development';
@@ -12,6 +19,7 @@ export interface AppConfig {
   jwtPrivateKeyPath: string;
   jwtPublicKeyPath: string;
   cookieDomain?: string;
+  tokenExpiry: TokenExpiryConfig;
   smtp: {
     host?: string;
     port?: number;
@@ -60,6 +68,16 @@ export function loadAndValidateConfig(): AppConfig {
     }
   }
 
+  const accessTokenExpiresInSec = parseInt(process.env.JWT_ACCESS_TOKEN_EXPIRES_IN_SEC || '900', 10);
+  const refreshTokenExpiresInSec = parseInt(process.env.JWT_REFRESH_TOKEN_EXPIRES_IN_SEC || '604800', 10);
+
+  if (isNaN(accessTokenExpiresInSec) || accessTokenExpiresInSec <= 0) {
+    throw new Error('[Config Error] JWT_ACCESS_TOKEN_EXPIRES_IN_SEC must be a positive integer');
+  }
+  if (isNaN(refreshTokenExpiresInSec) || refreshTokenExpiresInSec <= 0) {
+    throw new Error('[Config Error] JWT_REFRESH_TOKEN_EXPIRES_IN_SEC must be a positive integer');
+  }
+
   return {
     port,
     nodeEnv,
@@ -68,6 +86,12 @@ export function loadAndValidateConfig(): AppConfig {
     jwtPrivateKeyPath,
     jwtPublicKeyPath,
     cookieDomain: process.env.COOKIE_DOMAIN || undefined,
+    tokenExpiry: {
+      accessTokenExpiresInSec,
+      refreshTokenExpiresInSec,
+      accessTokenMaxAgeMs: accessTokenExpiresInSec * 1000,
+      refreshTokenMaxAgeMs: refreshTokenExpiresInSec * 1000
+    },
     smtp: {
       host: process.env.SMTP_HOST,
       port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587,

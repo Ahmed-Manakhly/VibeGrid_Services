@@ -49,7 +49,11 @@ export function createContainer(config: AppConfig, eventPublisher: RabbitMQPubli
   const emailTokenRepo = new MongoEmailTokenRepo();
   const emailSender = new NodemailerEmailSender();
   const hasher = new Argon2Hasher();
-  const tokenSigner = new RS256TokenSigner(config.jwtPrivateKeyPath, config.jwtPublicKeyPath);
+  const tokenSigner = new RS256TokenSigner(
+    config.jwtPrivateKeyPath,
+    config.jwtPublicKeyPath,
+    config.tokenExpiry.accessTokenExpiresInSec
+  );
 
   // Use Cases
   const registerUserUseCase = new RegisterUserUseCase(
@@ -57,20 +61,23 @@ export function createContainer(config: AppConfig, eventPublisher: RabbitMQPubli
     refreshTokenRepo,
     hasher,
     eventPublisher,
-    tokenSigner
+    tokenSigner,
+    config.tokenExpiry.refreshTokenMaxAgeMs
   );
 
   const authenticateUseCase = new AuthenticateUseCase(
     userAuthRepo,
     refreshTokenRepo,
     hasher,
-    tokenSigner
+    tokenSigner,
+    config.tokenExpiry.refreshTokenMaxAgeMs
   );
 
   const refreshTokenUseCase = new RefreshTokenUseCase(
     refreshTokenRepo,
     userAuthRepo,
-    tokenSigner
+    tokenSigner,
+    config.tokenExpiry.refreshTokenMaxAgeMs
   );
 
   const revokeTokenUseCase = new RevokeTokenUseCase(revokedTokenRepo, refreshTokenRepo);
@@ -92,7 +99,10 @@ export function createContainer(config: AppConfig, eventPublisher: RabbitMQPubli
   const changePasswordUseCase = new ChangePasswordUseCase(
     userAuthRepo,
     hasher,
-    revokedTokenRepo
+    revokedTokenRepo,
+    refreshTokenRepo,
+    config.tokenExpiry.accessTokenMaxAgeMs,
+    config.tokenExpiry.refreshTokenMaxAgeMs
   );
 
   const validateTokenGuardUseCase = new ValidateTokenGuardUseCase(
@@ -104,7 +114,8 @@ export function createContainer(config: AppConfig, eventPublisher: RabbitMQPubli
     userAuthRepo,
     refreshTokenRepo,
     eventPublisher,
-    tokenSigner
+    tokenSigner,
+    config.tokenExpiry.refreshTokenMaxAgeMs
   );
 
   const getMeUseCase = new GetMeUseCase(userAuthRepo);
@@ -129,10 +140,11 @@ export function createContainer(config: AppConfig, eventPublisher: RabbitMQPubli
     getMeUseCase,
     updateMeUseCase,
     validateTokenGuardUseCase,
-    tokenSigner
+    tokenSigner,
+    config.tokenExpiry
   );
 
-  const oauthController = new OAuthController(oauthLoginUseCase);
+  const oauthController = new OAuthController(oauthLoginUseCase, config.tokenExpiry);
   const adminUserController = new AdminUserController(
     adminCreateUserUseCase,
     adminGetUsersUseCase,
