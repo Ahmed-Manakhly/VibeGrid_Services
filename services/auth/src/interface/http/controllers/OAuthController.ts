@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { OAuthLoginUseCase } from '../../../application/use-cases/OAuthLogin.usecase';
 import { ValidationError } from '../../../application/errors/errors';
+import { ApiResponse } from '../response/apiResponse';
 
 export class OAuthController {
   constructor(private oauthLoginUseCase: OAuthLoginUseCase) {}
@@ -38,7 +39,7 @@ export class OAuthController {
     res.cookie('access_token', result.accessToken, { httpOnly: true, secure: isProd });
     res.cookie('refresh_token', result.refreshToken, { httpOnly: true, secure: isProd });
 
-    res.status(200).json({ message: 'Google OAuth login successful', user: result.user });
+    ApiResponse.success(res, { message: 'Google OAuth login successful', user: result.user });
   };
 
   githubLogin = (req: Request, res: Response): void => {
@@ -73,6 +74,6 @@ export class OAuthController {
     res.cookie('access_token', result.accessToken, { httpOnly: true, secure: isProd });
     res.cookie('refresh_token', result.refreshToken, { httpOnly: true, secure: isProd });
 
-    res.status(200).json({ message: 'GitHub OAuth login successful', user: result.user });
+    ApiResponse.success(res, { message: 'GitHub OAuth login successful', user: result.user });
   };
 }

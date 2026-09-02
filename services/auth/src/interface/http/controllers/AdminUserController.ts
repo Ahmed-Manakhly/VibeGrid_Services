@@ -5,6 +5,7 @@ import { AdminGetUserByIdUseCase } from '../../../application/use-cases/AdminGet
 import { AdminUpdateUserUseCase } from '../../../application/use-cases/AdminUpdateUser.usecase';
 import { AdminDeleteUserUseCase } from '../../../application/use-cases/AdminDeleteUser.usecase';
 import { ValidationError } from '../../../application/errors/errors';
+import { ApiResponse } from '../response/apiResponse';
 
 export class AdminUserController {
   constructor(
@@ -22,43 +23,62 @@ export class AdminUserController {
     }
 
     const user = await this.adminCreateUserUseCase.execute({ email, password, name, role, isActive });
-    res.status(201).json({
-      message: 'User created successfully',
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        isActive: user.isActive
-      }
-    });
+    ApiResponse.success(
+      res,
+      {
+        message: 'User created successfully',
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          isActive: user.isActive
+        }
+      },
+      201
+    );
   };
 
   getUsers = async (req: Request, res: Response): Promise<void> => {
     const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
     const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 20;
     const search = req.query.search as string;
+    const role = req.query.role as string;
+    const isActive = req.query.isActive as string;
+    const sort = req.query.sort as string;
+    const fields = req.query.fields ? (req.query.fields as string).split(',') : undefined;
 
-    const result = await this.adminGetUsersUseCase.execute({ page, limit, search });
-    res.status(200).json({
-      total: result.total,
-      page: result.page,
-      totalPages: result.totalPages,
-      users: result.users.map((u) => ({
-        id: u.id,
-        email: u.email,
-        name: u.name,
-        role: u.role,
-        isActive: u.isActive,
-        createdAt: u.createdAt
-      }))
+    const result = await this.adminGetUsersUseCase.execute({
+      page,
+      limit,
+      search,
+      role,
+      isActive,
+      sort,
+      fields
     });
+
+    ApiResponse.success(
+      res,
+      {
+        users: result.users.map((u) => ({
+          id: u.id,
+          email: u.email,
+          name: u.name,
+          role: u.role,
+          isActive: u.isActive,
+          createdAt: u.createdAt
+        }))
+      },
+      200,
+      result.pagination
+    );
   };
 
   getUserById = async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
     const user = await this.adminGetUserByIdUseCase.execute(id);
-    res.status(200).json({
+    ApiResponse.success(res, {
       user: {
         id: user.id,
         email: user.email,
@@ -86,7 +106,7 @@ export class AdminUserController {
       isActive
     });
 
-    res.status(200).json({
+    ApiResponse.success(res, {
       message: 'User updated successfully',
       user: {
         id: user.id,
@@ -115,7 +135,7 @@ export class AdminUserController {
       isActive
     });
 
-    res.status(200).json({
+    ApiResponse.success(res, {
       message: `User status changed to ${isActive ? 'active' : 'locked'}`,
       user: {
         id: user.id,
@@ -136,6 +156,6 @@ export class AdminUserController {
       targetUserId: id
     });
 
-    res.status(200).json({ message: 'User deleted successfully' });
+    ApiResponse.success(res, { message: 'User deleted successfully' });
   };
 }

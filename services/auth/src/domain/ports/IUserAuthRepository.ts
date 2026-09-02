@@ -4,13 +4,24 @@ export interface FindAllUsersQuery {
   page?: number;
   limit?: number;
   search?: string;
+  role?: string;
+  isActive?: boolean | string;
+  sort?: string;
+  fields?: string[];
+}
+
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
 }
 
 export interface PaginatedUsersResult {
   users: UserAuth[];
-  total: number;
-  page: number;
-  totalPages: number;
+  pagination: PaginationMeta;
 }
 
 export interface IUserAuthRepository {

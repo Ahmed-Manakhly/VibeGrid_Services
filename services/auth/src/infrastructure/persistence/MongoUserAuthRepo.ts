@@ -42,24 +42,84 @@ export class MongoUserAuthRepo implements IUserAuthRepository {
     const limit = Math.max(1, Math.min(100, query?.limit || 20));
     const skip = (page - 1) * limit;
 
-    const filter: any = {};
+    const filter: any = {
+      $or: [{ deletedAt: { $exists: false } }, { deletedAt: null }]
+    };
+
+    // 1. Search filter
     if (query?.search) {
-      filter.$or = [
-        { email: { $regex: query.search, $options: 'i' } },
-        { name: { $regex: query.search, $options: 'i' } }
-      ];
+      filter.$and = filter.$and || [];
+      filter.$and.push({
+        $or: [
+          { email: { $regex: query.search, $options: 'i' } },
+          { name: { $regex: query.search, $options: 'i' } }
+        ]
+      });
     }
 
+    // 2. Role filter (whitelisted)
+    const allowedRoles = ['CLIENT', 'DEVELOPER', 'USER', 'EMPLOYEE', 'ADMIN', 'SUPER_ADMIN'];
+    if (query?.role && allowedRoles.includes(query.role.toUpperCase())) {
+      filter.role = query.role.toUpperCase();
+    }
+
+    // 3. IsActive filter
+    if (query?.isActive !== undefined) {
+      const isActiveBool = query.isActive === true || query.isActive === 'true';
+      filter.isActive = isActiveBool;
+    }
+
+    // 4. Sorting (whitelisted sort fields)
+    const sortableFields: Record<string, string> = {
+      createdat: 'createdAt',
+      updatedat: 'updatedAt',
+      email: 'email',
+      name: 'name',
+      role: 'role',
+      isactive: 'isActive'
+    };
+
+    let sortOptions: any = { createdAt: -1 };
+    if (query?.sort) {
+      const parts = query.sort.split(',')[0].trim();
+      let isDesc = parts.startsWith('-') || parts.toLowerCase().endsWith(':desc');
+      let fieldName = parts.replace(/^[-+]/, '').split(':')[0].toLowerCase().trim();
+
+      if (sortableFields[fieldName]) {
+        sortOptions = { [sortableFields[fieldName]]: isDesc ? -1 : 1 };
+      }
+    }
+
+    // 5. Projection selection (whitelisted safe fields, excluding sensitive secrets)
+    const allowedProjection: Record<string, number> = {
+      _id: 1,
+      email: 1,
+      name: 1,
+      role: 1,
+      isActive: 1,
+      provider: 1,
+      providerId: 1,
+      createdAt: 1,
+      updatedAt: 1
+    };
+
     const [docs, total] = await Promise.all([
-      UserAuthModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).exec(),
+      UserAuthModel.find(filter, allowedProjection).sort(sortOptions).skip(skip).limit(limit).exec(),
       UserAuthModel.countDocuments(filter).exec()
     ]);
 
+    const totalPages = Math.ceil(total / limit) || 1;
+
     return {
       users: docs.map((doc) => this.toDomain(doc)),
-      total,
-      page,
-      totalPages: Math.ceil(total / limit)
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1
+      }
     };
   }
 

@@ -11,6 +11,7 @@ import { UpdateMeUseCase } from '../../../application/use-cases/UpdateMe.usecase
 import { ValidateTokenGuardUseCase } from '../../../application/use-cases/ValidateTokenGuard.usecase';
 import { ITokenSigner } from '../../../domain/ports/ITokenSigner';
 import { ValidationError, UnauthorizedError } from '../../../application/errors/errors';
+import { ApiResponse } from '../response/apiResponse';
 
 export class AuthController {
   constructor(
@@ -57,10 +58,14 @@ export class AuthController {
     const result = await this.registerUserUseCase.execute({ email, password, passwordConfirm, name, role });
     this.setCookies(res, result.accessToken, result.refreshToken);
 
-    res.status(201).json({
-      message: 'User registered successfully',
-      user: result.user
-    });
+    ApiResponse.success(
+      res,
+      {
+        message: 'User registered successfully',
+        user: result.user
+      },
+      201
+    );
   };
 
   login = async (req: Request, res: Response): Promise<void> => {
@@ -72,7 +77,7 @@ export class AuthController {
     const result = await this.authenticateUseCase.execute({ email, password });
     this.setCookies(res, result.accessToken, result.refreshToken);
 
-    res.status(200).json({
+    ApiResponse.success(res, {
       message: 'Authenticated successfully',
       user: result.user
     });
@@ -88,7 +93,7 @@ export class AuthController {
       const result = await this.refreshTokenUseCase.execute(refreshToken);
       this.setCookies(res, result.accessToken, result.refreshToken);
 
-      res.status(200).json({ message: 'Token rotated successfully' });
+      ApiResponse.success(res, { message: 'Token rotated successfully' });
     } catch (err) {
       res.clearCookie('access_token');
       res.clearCookie('refresh_token');
@@ -122,7 +127,7 @@ export class AuthController {
 
     res.clearCookie('access_token');
     res.clearCookie('refresh_token');
-    res.status(200).json({ message: 'Logged out successfully' });
+    ApiResponse.success(res, { message: 'Logged out successfully' });
   };
 
   forgotPassword = async (req: Request, res: Response): Promise<void> => {
@@ -132,7 +137,7 @@ export class AuthController {
     }
 
     const result = await this.requestPasswordResetUseCase.execute({ email });
-    res.status(200).json(result);
+    ApiResponse.success(res, result);
   };
 
   resetPassword = async (req: Request, res: Response): Promise<void> => {
@@ -147,7 +152,7 @@ export class AuthController {
       newPassword,
       confirmPassword
     });
-    res.status(200).json(result);
+    ApiResponse.success(res, result);
   };
 
   changePassword = async (req: Request, res: Response): Promise<void> => {
@@ -175,7 +180,7 @@ export class AuthController {
 
     res.clearCookie('access_token');
     res.clearCookie('refresh_token');
-    res.status(200).json({ message: 'Password changed successfully. Please log in again with your new password.' });
+    ApiResponse.success(res, { message: 'Password changed successfully. Please log in again with your new password.' });
   };
 
   getMe = async (req: Request, res: Response): Promise<void> => {
@@ -185,7 +190,7 @@ export class AuthController {
     }
 
     const user = await this.getMeUseCase.execute(userId);
-    res.status(200).json({
+    ApiResponse.success(res, {
       user: {
         id: user.id,
         email: user.email,
@@ -207,7 +212,7 @@ export class AuthController {
     }
 
     const user = await this.updateMeUseCase.execute({ userId, name });
-    res.status(200).json({
+    ApiResponse.success(res, {
       message: 'Profile updated successfully',
       user: {
         id: user.id,
@@ -239,7 +244,7 @@ export class AuthController {
       tokenIat: decoded.iat
     });
 
-    res.status(200).json({
+    ApiResponse.success(res, {
       valid: true,
       userId,
       email: decoded.email,
