@@ -1,11 +1,11 @@
 #include <tunables/global>
 
-# Nginx AppArmor Profile for VibeGrid API Gateway
+# VibeGrid Nginx API Gateway AppArmor Profile
 profile vibegrid-restrict-nginx flags=(attach_disconnected, mediate_deleted) {
     include <abstractions/base>
     include <abstractions/nameservice>
 
-    # Binaries
+    # Allow nginx binaries
     /usr/sbin/nginx rix,
     /usr/bin/nginx rix,
     /bin/sh ix,
@@ -13,62 +13,49 @@ profile vibegrid-restrict-nginx flags=(attach_disconnected, mediate_deleted) {
     /bin/bash ix,
     /bin/busybox ix,
 
-    # Entrypoint
+    # Allow Docker entrypoint script
     /docker-entrypoint.sh rix,
     /docker-entrypoint.d/ r,
     /docker-entrypoint.d/* rix,
 
-    # Libraries
+    # Allow library access
     /lib/** rm,
     /usr/lib/** rm,
     /usr/local/lib/** rm,
     /lib64/** rm,
 
-    # Nginx config & logs
+    # Allow nginx configuration files (read-only)
     /etc/nginx/** r,
     /etc/nginx/conf.d/** r,
     /etc/nginx/nginx.conf r,
+
+    # Allow nginx runtime directories
     /var/run/nginx.pid rw,
     /var/cache/nginx/** rw,
     /var/log/nginx/** w,
     /run/** rw,
     /tmp/** rw,
 
-    # Proc access
-    @{PROC}/sys/kernel/random/uuid r,
-    @{PROC}/cpuinfo r,
-    @{PROC}/meminfo r,
-    @{PROC}/sys/kernel/hostname r,
-    @{PROC}//fd/* rw,
-    /sys/devices/system/cpu/** r,
-
-    # Capabilities
+    # Network capabilities
     capability net_bind_service,
     capability setgid,
     capability setuid,
     capability dac_override,
     capability chown,
-    capability mknod,
 
-    # Networking
+    # Network access
     network inet stream,
     network inet6 stream,
     network inet dgram,
     network inet6 dgram,
     network unix stream,
 
-    # Signals
+    # Allow signals for reload/restart
     signal (receive) peer=unconfined,
     signal (send) peer=vibegrid-restrict-nginx,
 
     # Deny dangerous operations
     deny /bin/mount x,
     deny /bin/umount x,
-    deny /sbin/insmod x,
-    deny /sbin/modprobe x,
     deny capability sys_admin,
-    deny capability sys_module,
-    deny @{PROC}/docker*/cmdline w,
-    deny @{PROC}/docker*/fd/** w,
-    deny @{PROC}/sys/kernel/core_pattern w,
 }

@@ -11,6 +11,8 @@ import { NotFoundError } from '../application/errors/errors';
 export function createApp(container: ServiceContainer): Express {
   const app = express();
 
+  app.set('trust proxy', 1); // Trust Nginx / API Gateway proxy headers
+
   app.use(express.json());
   app.use(cookieParser());
   app.use(cors({ origin: true, credentials: true }));
