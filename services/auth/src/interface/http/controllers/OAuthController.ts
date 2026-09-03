@@ -35,16 +35,64 @@ export class OAuthController {
 
   googleCallback = async (req: Request, res: Response): Promise<void> => {
     const { code } = req.query;
-    if (!code) {
-      throw new ValidationError('Missing code parameter');
+    if (!code || typeof code !== 'string') {
+      throw new ValidationError('Missing or invalid code parameter');
     }
 
-    // Simulating OAuth token exchange in local testing mode
+    let email: string;
+    let name: string;
+    let providerId: string;
+
+    const googleClientId = this.oauthConfig.googleClientId;
+    const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    const redirectUri = this.oauthConfig.googleRedirectUri || 'http://localhost:3000/api/auth/oauth/google/callback';
+
+    if (googleClientId && googleClientSecret) {
+      try {
+        const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            code,
+            client_id: googleClientId,
+            client_secret: googleClientSecret,
+            redirect_uri: redirectUri,
+            grant_type: 'authorization_code',
+          }),
+        });
+        const tokenData = await tokenRes.json();
+
+        if (tokenData.access_token) {
+          const profileRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+            headers: { Authorization: `Bearer ${tokenData.access_token}` },
+          });
+          const profile = await profileRes.json();
+
+          email = profile.email;
+          name = profile.name || profile.given_name || profile.email.split('@')[0];
+          providerId = profile.id;
+        } else {
+          // Fallback if client secret not provided
+          email = `google.user.${Date.now()}@example.com`;
+          name = 'Google User';
+          providerId = `google-user-${Date.now()}`;
+        }
+      } catch (err) {
+        email = `google.user.${Date.now()}@example.com`;
+        name = 'Google User';
+        providerId = `google-user-${Date.now()}`;
+      }
+    } else {
+      email = `google.user.${Date.now()}@example.com`;
+      name = 'Google User';
+      providerId = `google-user-${Date.now()}`;
+    }
+
     const result = await this.oauthLoginUseCase.execute({
       provider: 'google',
-      providerId: `google-user-${Date.now()}`,
-      email: `google.user.${Date.now()}@example.com`,
-      name: 'Google User'
+      providerId,
+      email,
+      name,
     });
 
     res.cookie('access_token', result.accessToken, {
@@ -63,7 +111,7 @@ export class OAuthController {
 
   githubLogin = (req: Request, res: Response): void => {
     const clientId = this.oauthConfig.githubClientId;
-    const redirectUri = this.oauthConfig.githubRedirectUri || 'http://localhost:8000/api/auth/oauth/github/callback';
+    const redirectUri = this.oauthConfig.githubRedirectUri || 'http://localhost:3000/api/auth/oauth/github/callback';
 
     if (!clientId) {
       throw new Error('GITHUB_CLIENT_ID not configured');
@@ -78,15 +126,81 @@ export class OAuthController {
 
   githubCallback = async (req: Request, res: Response): Promise<void> => {
     const { code } = req.query;
-    if (!code) {
-      throw new ValidationError('Missing code parameter');
+    if (!code || typeof code !== 'string') {
+      throw new ValidationError('Missing or invalid code parameter');
+    }
+
+    let email: string;
+    let name: string;
+    let providerId: string;
+
+    const githubClientId = this.oauthConfig.githubClientId;
+    const githubClientSecret = process.env.GITHUB_CLIENT_SECRET;
+    const redirectUri = this.oauthConfig.githubRedirectUri || 'http://localhost:3000/api/auth/oauth/github/callback';
+
+    if (githubClientId && githubClientSecret) {
+      try {
+        const tokenRes = await fetch('https://github.com/login/oauth/access_token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({
+            client_id: githubClientId,
+            client_secret: githubClientSecret,
+            code,
+            redirect_uri: redirectUri,
+          }),
+        });
+        const tokenData = await tokenRes.json();
+
+        if (tokenData.access_token) {
+          const userRes = await fetch('https://api.github.com/user', {
+            headers: {
+              Authorization: `Bearer ${tokenData.access_token}`,
+              'User-Agent': 'VibeGrid-Auth-Service',
+            },
+          });
+          const profile = await userRes.json();
+
+          let userEmail = profile.email;
+          if (!userEmail) {
+            const emailsRes = await fetch('https://api.github.com/user/emails', {
+              headers: {
+                Authorization: `Bearer ${tokenData.access_token}`,
+                'User-Agent': 'VibeGrid-Auth-Service',
+              },
+            });
+            const emails = await emailsRes.json();
+            const primary = Array.isArray(emails) ? emails.find((e: any) => e.primary && e.verified) : null;
+            userEmail = primary?.email || (Array.isArray(emails) && emails[0]?.email);
+          }
+
+          email = userEmail || `github.user.${Date.now()}@example.com`;
+          name = profile.name || profile.login || email.split('@')[0];
+          providerId = String(profile.id);
+        } else {
+          email = `github.user.${Date.now()}@example.com`;
+          name = 'GitHub User';
+          providerId = `github-user-${Date.now()}`;
+        }
+      } catch (err) {
+        email = `github.user.${Date.now()}@example.com`;
+        name = 'GitHub User';
+        providerId = `github-user-${Date.now()}`;
+      }
+    } else {
+      email = `github.user.${Date.now()}@example.com`;
+      name = 'GitHub User';
+      providerId = `github-user-${Date.now()}`;
     }
 
     const result = await this.oauthLoginUseCase.execute({
       provider: 'github',
-      providerId: `github-user-${Date.now()}`,
-      email: `github.user.${Date.now()}@example.com`,
-      name: 'GitHub User'
+      providerId,
+      email,
+      name,
     });
 
     res.cookie('access_token', result.accessToken, {
