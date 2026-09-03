@@ -1,10 +1,113 @@
 # ─── DOCKER DEV COMPOSE ──────────────────────────────────────────────────────
-# Runs vibegrid_auth INSIDE Docker, pointing to container service names.
-# Used for integration testing and CI pre-production validation.
-# Usage: docker compose -f infrastructure/docker-compose.dev.yml up -d
+# Runs vibegrid_auth_dev INSIDE Docker alongside DB containers for local dev.
+# Usage: bash infrastructure/deploy.dev.sh
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:
+  # PostgreSQL
+  vibegrid_postgres:
+    image: postgres:16-alpine
+    container_name: vibegrid_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-vibegrid}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vibegrid_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-vibegrid_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vibegrid} -d ${POSTGRES_DB:-vibegrid_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vibegrid_net
+
+  # MongoDB
+  vibegrid_mongo:
+    image: mongo:7.0
+    container_name: vibegrid_mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-admin_secret}
+      MONGO_INITDB_DATABASE: auth_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vibegrid_net
+
+  # Redis
+  vibegrid_redis:
+    image: redis:7-alpine
+    container_name: vibegrid_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_secret}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_secret}", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vibegrid_net
+
+  # RabbitMQ
+  vibegrid_rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: vibegrid_rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vibegrid_net
+
+  # MinIO
+  vibegrid_minio:
+    image: minio/minio
+    container_name: vibegrid_minio
+    restart: unless-stopped
+    entrypoint: sh -c 'minio server /data --console-address ":9001"'
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASS:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vibegrid_net
+
+  # Dev Auth Microservice Container
   vibegrid_auth_dev:
     build:
       context: ../services/auth
@@ -14,7 +117,6 @@ services:
     environment:
       PORT: 8001
       NODE_ENV: docker_development
-      # Use container service names (not localhost) when running inside Docker
       MONGO_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-admin_secret}@vibegrid_mongo:27017/auth_db?authSource=admin
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@vibegrid_rabbitmq:5672
       JWT_PRIVATE_KEY_PATH: /app/secrets/jwt.private.key
@@ -32,7 +134,6 @@ services:
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
       GITHUB_REDIRECT_URI: ${GITHUB_REDIRECT_URI}
     volumes:
-      # Mount secrets from local dev directory (gitignored)
       - ../services/auth/secrets:/app/secrets:ro
     ports:
       - "8001:8001"
@@ -48,3 +149,10 @@ networks:
   vibegrid_net:
     name: vibegrid_net
     external: true
+
+volumes:
+  postgres_data:
+  mongo_data:
+  redis_data:
+  rabbitmq_data:
+  minio_data:

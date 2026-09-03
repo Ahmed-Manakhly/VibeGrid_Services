@@ -19,11 +19,12 @@ fi
 # 2. Boot ONLY infrastructure databases (no app containers)
 echo ""
 echo "🚀 Starting infrastructure databases only..."
-docker compose --env-file "$SCRIPT_DIR/../.env" -f "$SCRIPT_DIR/docker-compose.yml" up -d \
+docker compose --env-file "$SCRIPT_DIR/../.env" -f "$SCRIPT_DIR/docker-compose.dev.yml" up -d \
     vibegrid_mongo \
     vibegrid_postgres \
     vibegrid_redis \
-    vibegrid_rabbitmq
+    vibegrid_rabbitmq \
+    vibegrid_minio
 
 # 3. Wait for MongoDB to be ready (Auth Service primary DB)
 echo ""

@@ -46,7 +46,6 @@ SUCCESS=false
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
   if docker compose \
       --env-file "$ENV_FILE" \
-      -f "$SCRIPT_DIR/docker-compose.yml" \
       -f "$SCRIPT_DIR/docker-compose.dev.yml" \
       up -d --build; then
     SUCCESS=true
