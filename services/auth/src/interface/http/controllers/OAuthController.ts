@@ -20,7 +20,7 @@ export class OAuthController {
 
   googleLogin = (req: Request, res: Response): void => {
     const clientId = this.oauthConfig.googleClientId;
-    const redirectUri = this.oauthConfig.googleRedirectUri || 'http://localhost:8000/api/auth/oauth/google/callback';
+    const redirectUri = this.oauthConfig.googleRedirectUri || 'http://localhost:3000/api/auth/oauth/google/callback';
 
     if (!clientId) {
       throw new Error('GOOGLE_CLIENT_ID not configured');
