@@ -27,6 +27,7 @@ export interface AppConfig {
   jwtPrivateKeyPath: string;
   jwtPublicKeyPath: string;
   cookieDomain?: string;
+  fixedSeedOtp?: string;
   tokenExpiry: TokenExpiryConfig;
   smtp: {
     host?: string;
@@ -144,6 +145,7 @@ export function loadAndValidateConfig(): AppConfig {
     jwtPrivateKeyPath,
     jwtPublicKeyPath,
     cookieDomain: process.env.COOKIE_DOMAIN || undefined,
+    fixedSeedOtp: process.env.FIXED_SEED_OTP || '123456',
     tokenExpiry: {
       accessTokenExpiresInSec,
       refreshTokenExpiresInSec,

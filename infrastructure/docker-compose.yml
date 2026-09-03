@@ -20,6 +20,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    ports:
+      - "5432:5432"
     networks:
       - vibegrid_net
 
@@ -109,6 +111,13 @@ services:
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@vibegrid_rabbitmq:5672
       JWT_PRIVATE_KEY_PATH: /app/secrets/jwt.private.key
       JWT_PUBLIC_KEY_PATH: /app/secrets/jwt.public.key
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@vibegrid.manakhly.tech}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-V1b3Gr1d_Adm!n2026}
+      ADMIN_NAME: ${ADMIN_NAME:-VibeGrid Admin}
+      DEV_USER_EMAIL: ${DEV_USER_EMAIL:-dev@vibegrid.manakhly.tech}
+      DEV_USER_PASSWORD: ${DEV_USER_PASSWORD:-V1b3Gr1d_D3v!2026}
+      DEV_USER_NAME: ${DEV_USER_NAME:-VibeGrid Developer}
+      FIXED_SEED_OTP: ${FIXED_SEED_OTP:-123456}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}

@@ -61,7 +61,7 @@ export function createContainer(config: AppConfig, eventPublisher: RabbitMQPubli
   );
 
   // Use Cases
-  const verifyEmailUseCase = new VerifyEmailUseCase(userAuthRepo, emailTokenRepo);
+  const verifyEmailUseCase = new VerifyEmailUseCase(userAuthRepo, emailTokenRepo, config.fixedSeedOtp);
   const sendEmailVerificationTokenUseCase = new SendEmailVerificationTokenUseCase(
     userAuthRepo,
     emailTokenRepo,

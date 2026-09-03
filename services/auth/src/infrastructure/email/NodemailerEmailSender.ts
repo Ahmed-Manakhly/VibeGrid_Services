@@ -19,6 +19,8 @@ export class NodemailerEmailSender implements IEmailSender {
     this.transporter = nodemailer.createTransport({
       host: config?.host || 'smtp.mailtrap.io',
       port: config?.port || 2525,
+      connectionTimeout: 3000,
+      socketTimeout: 3000,
       auth: {
         user: config?.user || '',
         pass: config?.pass || ''

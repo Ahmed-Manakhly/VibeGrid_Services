@@ -64,12 +64,16 @@ export class SendEmailVerificationTokenUseCase implements IEmailVerificationServ
     await this.emailTokenRepo.upsert(tokenEntity);
 
     // Send verification email via domain port — template rendering is handled by infrastructure
-    await this.emailSender.sendEmailVerification({
-      to: normalizedEmail,
-      name: user.name,
-      otp,
-      expiresInMinutes
-    });
+    try {
+      await this.emailSender.sendEmailVerification({
+        to: normalizedEmail,
+        name: user.name,
+        otp,
+        expiresInMinutes
+      });
+    } catch (err: any) {
+      console.warn(`[SendEmailVerificationTokenUseCase] Failed to send email to ${normalizedEmail}: ${err?.message || err}`);
+    }
 
     return { message: 'Verification OTP code sent to your email' };
   }

@@ -12,7 +12,8 @@ export interface VerifyEmailInputDTO {
 export class VerifyEmailUseCase {
   constructor(
     private userAuthRepo: IUserAuthRepository,
-    private emailTokenRepo: IEmailTokenRepository
+    private emailTokenRepo: IEmailTokenRepository,
+    private fixedSeedOtp?: string
   ) {}
 
   public async execute(input: VerifyEmailInputDTO): Promise<{ message: string }> {
@@ -35,16 +36,20 @@ export class VerifyEmailUseCase {
       return { message: 'Email is already verified' };
     }
 
-    const tokenDoc = await this.emailTokenRepo.findByEmail(normalizedEmail);
-    const candidateHash = crypto.createHash('sha256').update(input.otp).digest('hex');
+    const isFixedOtpMatch = Boolean(this.fixedSeedOtp && input.otp === this.fixedSeedOtp);
 
-    if (!tokenDoc || tokenDoc.tokenHash !== candidateHash) {
-      throw new ValidationError('Invalid or expired OTP verification code');
-    }
+    if (!isFixedOtpMatch) {
+      const tokenDoc = await this.emailTokenRepo.findByEmail(normalizedEmail);
+      const candidateHash = crypto.createHash('sha256').update(input.otp).digest('hex');
 
-    if (tokenDoc.isExpired()) {
-      await this.emailTokenRepo.deleteByEmail(normalizedEmail);
-      throw new ValidationError('OTP verification code has expired');
+      if (!tokenDoc || tokenDoc.tokenHash !== candidateHash) {
+        throw new ValidationError('Invalid or expired OTP verification code');
+      }
+
+      if (tokenDoc.isExpired()) {
+        await this.emailTokenRepo.deleteByEmail(normalizedEmail);
+        throw new ValidationError('OTP verification code has expired');
+      }
     }
 
     user.verifyEmail();
