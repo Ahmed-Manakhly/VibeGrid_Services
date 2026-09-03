@@ -2,9 +2,11 @@
 node_modules/
 .pnpm-store/
 
-# Production build outputs
+# Production build outputs & test coverage
 dist/
 build/
+coverage/
+*.lcov
 
 # Environment variables & secrets
 .env

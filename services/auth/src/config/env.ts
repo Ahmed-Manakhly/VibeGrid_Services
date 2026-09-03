@@ -62,6 +62,18 @@ export function loadAndValidateConfig(): AppConfig {
     throw new Error('[Config Error] RABBITMQ_URL is required in production environment');
   }
 
+  // ── Startup Environment Variable Validation ─────────────────────────────
+  const requiredEnvVars = ['MONGO_URI', 'RABBITMQ_URL', 'GOOGLE_CLIENT_ID', 'GITHUB_CLIENT_ID'];
+  const missingVars = requiredEnvVars.filter((v) => !process.env[v]);
+
+  if (missingVars.length > 0) {
+    if (nodeEnv === 'production') {
+      throw new Error(`[Config Error] Missing required environment variables: ${missingVars.join(', ')}`);
+    } else {
+      console.warn(`⚠️ [Config Warning] Missing optional local env vars: ${missingVars.join(', ')} (using fallback dev defaults)`);
+    }
+  }
+
   const defaultPrivatePath = path.resolve(__dirname, '../../secrets/jwt.private.key');
   const defaultPublicPath = path.resolve(__dirname, '../../secrets/jwt.public.key');
 
