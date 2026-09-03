@@ -120,11 +120,27 @@ export function loadAndValidateConfig(): AppConfig {
     // Fallback to original if parsing fails
   }
 
+  let formattedRabbitUrl = rabbitmqUrl || 'amqp://localhost:5672';
+
+  try {
+    if (formattedRabbitUrl.includes('@') && formattedRabbitUrl.startsWith('amqp://')) {
+      const parts = formattedRabbitUrl.replace('amqp://', '').split('@');
+      const creds = parts[0].split(':');
+      if (creds.length === 2) {
+        const user = encodeURIComponent(decodeURIComponent(creds[0]));
+        const pass = encodeURIComponent(decodeURIComponent(creds[1]));
+        formattedRabbitUrl = `amqp://${user}:${pass}@${parts[1]}`;
+      }
+    }
+  } catch (e) {
+    // Fallback to original
+  }
+
   return {
     port,
     nodeEnv,
     mongoUri: formattedMongoUri,
-    rabbitmqUrl: rabbitmqUrl || 'amqp://localhost:5672',
+    rabbitmqUrl: formattedRabbitUrl,
     jwtPrivateKeyPath,
     jwtPublicKeyPath,
     cookieDomain: process.env.COOKIE_DOMAIN || undefined,

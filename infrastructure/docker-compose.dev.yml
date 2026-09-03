@@ -143,6 +143,26 @@ services:
       vibegrid_rabbitmq:
         condition: service_healthy
     networks:
+      vibegrid_net:
+        aliases:
+          - vibegrid_auth
+
+  # Nginx API Gateway (routes http://localhost:8000/api/auth/* -> vibegrid_auth_dev)
+  vibegrid_api_gateway:
+    image: nginx:alpine
+    container_name: vibegrid_api_gateway
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./api-gateway/gateway.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - vibegrid_postgres
+      - vibegrid_mongo
+      - vibegrid_redis
+      - vibegrid_rabbitmq
+      - vibegrid_auth_dev
+    networks:
       - vibegrid_net
 
 networks:
