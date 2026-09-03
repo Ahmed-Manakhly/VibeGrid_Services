@@ -42,6 +42,7 @@ export class OAuthController {
     let email: string;
     let name: string;
     let providerId: string;
+    let avatarUrl: string | undefined;
 
     const googleClientId = this.oauthConfig.googleClientId;
     const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
@@ -71,6 +72,7 @@ export class OAuthController {
           email = profile.email;
           name = profile.name || profile.given_name || profile.email.split('@')[0];
           providerId = profile.id;
+          avatarUrl = profile.picture;
         } else {
           // Fallback if client secret not provided
           email = `google.user.${Date.now()}@example.com`;
@@ -106,7 +108,13 @@ export class OAuthController {
       maxAge: this.tokenExpiry.refreshTokenMaxAgeMs
     });
 
-    ApiResponse.success(res, { message: 'Google OAuth login successful', user: result.user });
+    ApiResponse.success(res, {
+      message: 'Google OAuth login successful',
+      user: {
+        ...result.user,
+        avatarUrl,
+      },
+    });
   };
 
   githubLogin = (req: Request, res: Response): void => {
@@ -133,6 +141,7 @@ export class OAuthController {
     let email: string;
     let name: string;
     let providerId: string;
+    let avatarUrl: string | undefined;
 
     const githubClientId = this.oauthConfig.githubClientId;
     const githubClientSecret = process.env.GITHUB_CLIENT_SECRET;
@@ -180,6 +189,7 @@ export class OAuthController {
           email = userEmail || `github.user.${Date.now()}@example.com`;
           name = profile.name || profile.login || email.split('@')[0];
           providerId = String(profile.id);
+          avatarUrl = profile.avatar_url;
         } else {
           email = `github.user.${Date.now()}@example.com`;
           name = 'GitHub User';
@@ -214,6 +224,12 @@ export class OAuthController {
       maxAge: this.tokenExpiry.refreshTokenMaxAgeMs
     });
 
-    ApiResponse.success(res, { message: 'GitHub OAuth login successful', user: result.user });
+    ApiResponse.success(res, {
+      message: 'GitHub OAuth login successful',
+      user: {
+        ...result.user,
+        avatarUrl,
+      },
+    });
   };
 }
