@@ -4,6 +4,8 @@ import { CreateUploadIntentUseCase } from '../../../application/use-cases/Create
 import { ConfirmUploadUseCase } from '../../../application/use-cases/ConfirmUploadUseCase';
 import { GetMediaAssetUseCase } from '../../../application/use-cases/GetMediaAssetUseCase';
 import { MediaApplicationError } from '../../../application/errors/MediaApplicationError';
+import { DomainError } from '../../../domain/errors/DomainError';
+import { MediaPurpose } from '../../../domain/value-objects/MediaFileConfig';
 
 export class MediaController {
   constructor(
@@ -19,12 +21,12 @@ export class MediaController {
         return;
       }
 
-      const { mimeType, fileSizeBytes, purpose } = req.body;
+      const { mimeType, fileSizeBytes, purpose = 'avatar' } = req.body;
       const result = await this.createUploadIntentUseCase.execute({
         ownerId: req.user.userId,
         mimeType,
         fileSizeBytes: Number(fileSizeBytes),
-        purpose,
+        purpose: purpose as MediaPurpose,
       });
 
       res.status(201).json({
@@ -34,6 +36,10 @@ export class MediaController {
     } catch (err: any) {
       if (err instanceof MediaApplicationError) {
         res.status(err.statusCode).json({ status: 'error', message: err.message });
+        return;
+      }
+      if (err instanceof DomainError || err.name === 'ValidationError' || err.name === 'CastError') {
+        res.status(400).json({ status: 'error', message: err.message });
         return;
       }
       next(err);
@@ -62,6 +68,10 @@ export class MediaController {
         res.status(err.statusCode).json({ status: 'error', message: err.message });
         return;
       }
+      if (err instanceof DomainError) {
+        res.status(400).json({ status: 'error', message: err.message });
+        return;
+      }
       next(err);
     }
   };
@@ -83,6 +93,10 @@ export class MediaController {
     } catch (err: any) {
       if (err instanceof MediaApplicationError) {
         res.status(err.statusCode).json({ status: 'error', message: err.message });
+        return;
+      }
+      if (err instanceof DomainError) {
+        res.status(400).json({ status: 'error', message: err.message });
         return;
       }
       next(err);

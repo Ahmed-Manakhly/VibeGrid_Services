@@ -12,11 +12,10 @@ export interface MinioS3Config {
 }
 
 export class MinioS3StorageProvider implements IStorageProvider {
-  private s3InternalClient: S3Client;
-  private s3PublicClient: S3Client;
+  private s3Client: S3Client;
 
   constructor(private config: MinioS3Config) {
-    this.s3InternalClient = new S3Client({
+    this.s3Client = new S3Client({
       endpoint: config.internalEndpoint,
       region: config.region,
       credentials: {
@@ -26,15 +25,21 @@ export class MinioS3StorageProvider implements IStorageProvider {
       forcePathStyle: true,
     });
 
-    this.s3PublicClient = new S3Client({
-      endpoint: config.publicEndpoint,
-      region: config.region,
-      credentials: {
-        accessKeyId: config.accessKeyId,
-        secretAccessKey: config.secretAccessKey,
-      },
-      forcePathStyle: true,
-    });
+    // Ensure Host header matches public endpoint hostname for MinIO bucket domain rules
+    try {
+      const publicHost = new URL(config.publicEndpoint).host;
+      this.s3Client.middlewareStack.add(
+        (next) => async (args: any) => {
+          if (args.request && args.request.headers) {
+            args.request.headers['host'] = publicHost;
+          }
+          return await next(args);
+        },
+        { step: 'build', priority: 'high', name: 'minioHostHeaderFix' }
+      );
+    } catch (e) {
+      // ignore URL parsing error
+    }
   }
 
   async generatePresignedUploadUrl(
@@ -48,11 +53,14 @@ export class MinioS3StorageProvider implements IStorageProvider {
       ContentType: mimeType,
     });
 
-    const uploadUrl = await getSignedUrl(this.s3PublicClient, command, {
+    const uploadUrl = await getSignedUrl(this.s3Client, command, {
       expiresIn: expiresInSeconds,
     });
 
-    return { uploadUrl, expiresInSeconds };
+    // Replace internal endpoint hostname with public endpoint if different
+    const finalUploadUrl = uploadUrl.replace(this.config.internalEndpoint, this.config.publicEndpoint);
+
+    return { uploadUrl: finalUploadUrl, expiresInSeconds };
   }
 
   async verifyObjectMetadata(
@@ -64,7 +72,7 @@ export class MinioS3StorageProvider implements IStorageProvider {
         Key: objectKey,
       });
 
-      const response = await this.s3InternalClient.send(command);
+      const response = await this.s3Client.send(command);
       if (!response || response.ContentLength === undefined) {
         return null;
       }
@@ -74,10 +82,21 @@ export class MinioS3StorageProvider implements IStorageProvider {
         contentType: response.ContentType || 'application/octet-stream',
       };
     } catch (err: any) {
-      if (err.name === 'NotFound' || err.$metadata?.httpStatusCode === 404) {
+      console.error('[MinioS3StorageProvider Error] HeadObject full error:', {
+        name: err.name,
+        message: err.message,
+        statusCode: err.$metadata?.httpStatusCode || err.statusCode,
+        code: err.code
+      });
+      if (
+        err.name === 'NotFound' ||
+        err.name === 'NoSuchKey' ||
+        err.$metadata?.httpStatusCode === 404 ||
+        err.statusCode === 404
+      ) {
         return null;
       }
-      throw err;
+      return null;
     }
   }
 

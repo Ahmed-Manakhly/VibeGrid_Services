@@ -2,11 +2,11 @@
   "name": "vibegrid-media-service",
   "version": "1.0.0",
   "description": "VibeGrid Express Media Microservice (Clean Architecture / DDD)",
-  "main": "dist/interface/main.js",
+  "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/interface/main.js",
-    "dev": "ts-node-dev --respawn --transpile-only src/interface/main.ts",
+    "start": "node dist/index.js",
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "test": "jest"
   },
   "dependencies": {

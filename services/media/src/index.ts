@@ -31,12 +31,15 @@ app.get('/health', (req, res) => res.json({ status: 'healthy', service: 'media' 
 app.get('/ready', (req, res) => res.json({ status: 'ready', service: 'media' }));
 
 // DI Setup
+const internalEp = process.env.MINIO_INTERNAL_ENDPOINT || 'http://vibegrid_minio:9000';
+const publicEp = process.env.MINIO_PUBLIC_ENDPOINT || 'http://localhost:9000';
+
 const storageProvider = new MinioS3StorageProvider({
-  internalEndpoint: process.env.MINIO_INTERNAL_ENDPOINT || 'http://vibegrid_minio:9000',
-  publicEndpoint: process.env.MINIO_PUBLIC_ENDPOINT || 'http://localhost:9000',
+  internalEndpoint: internalEp,
+  publicEndpoint: publicEp,
   region: process.env.MINIO_REGION || 'us-east-1',
   accessKeyId: process.env.MINIO_USER || 'minioadmin',
-  secretAccessKey: process.env.MINIO_PASS || 'VgMinio_S2026#h8$FdT!6pNs',
+  secretAccessKey: process.env.MINIO_PASS || 'minioadmin',
   bucketName: process.env.MINIO_BUCKET || 'vibegrid-media',
 });
 
