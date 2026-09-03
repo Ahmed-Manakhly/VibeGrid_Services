@@ -103,10 +103,27 @@ export function loadAndValidateConfig(): AppConfig {
     throw new Error('[Config Error] EMAIL_VERIFICATION_TOKEN_EXPIRES_IN_SEC must be a positive integer');
   }
 
+  let formattedMongoUri = mongoUri || 'mongodb://localhost:27017/auth_db';
+
+  // Fix: URL-encode credentials if MONGO_URI contains raw special characters
+  try {
+    if (formattedMongoUri.includes('@') && formattedMongoUri.startsWith('mongodb://')) {
+      const parts = formattedMongoUri.replace('mongodb://', '').split('@');
+      const creds = parts[0].split(':');
+      if (creds.length === 2) {
+        const user = encodeURIComponent(decodeURIComponent(creds[0]));
+        const pass = encodeURIComponent(decodeURIComponent(creds[1]));
+        formattedMongoUri = `mongodb://${user}:${pass}@${parts[1]}`;
+      }
+    }
+  } catch (e) {
+    // Fallback to original if parsing fails
+  }
+
   return {
     port,
     nodeEnv,
-    mongoUri: mongoUri || 'mongodb://localhost:27017/auth_db',
+    mongoUri: formattedMongoUri,
     rabbitmqUrl: rabbitmqUrl || 'amqp://localhost:5672',
     jwtPrivateKeyPath,
     jwtPublicKeyPath,
