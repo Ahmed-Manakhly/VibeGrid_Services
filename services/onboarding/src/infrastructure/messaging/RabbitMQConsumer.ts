@@ -1,5 +1,8 @@
 import amqp, { Channel, ConsumeMessage } from 'amqplib';
+import { createLogger } from '../../../../../shared/logger';
 import { ProcessOnboardingEventUseCase } from '../../application/use-cases/ProcessOnboardingEvent.usecase';
+
+const logger = createLogger('vibegrid-onboarding');
 
 export interface RabbitMQConsumerConfig {
   url: string;
@@ -65,7 +68,7 @@ export class RabbitMQConsumer {
     // Bind canonical user.registered routing key to q.user.onboarding
     await this.channel.bindQueue(queue, exchange, 'user.registered');
 
-    console.log(`✅ [RabbitMQConsumer] Bound queue [${queue}] to exchange [${exchange}]`);
+    logger.info(`Bound queue [${queue}] to exchange [${exchange}]`, { queue, exchange });
 
     // 4. Start Consumer Loop
     await this.channel.consume(queue, async (msg: ConsumeMessage | null) => {
@@ -74,6 +77,13 @@ export class RabbitMQConsumer {
       try {
         const content = msg.content.toString();
         const envelope = JSON.parse(content);
+        const correlationId = envelope.correlationId || envelope.payload?.correlationId || envelope.eventId;
+
+        logger.info(`Processing onboarding event [${envelope.eventName || 'unknown'}]`, {
+          eventId: envelope.eventId,
+          eventName: envelope.eventName,
+          correlationId,
+        });
 
         const result = await this.processOnboardingUseCase.execute(envelope);
 
@@ -82,10 +92,10 @@ export class RabbitMQConsumer {
         }
       } catch (err: any) {
         const deathCount = this.getDeathCount(msg);
-        console.error(`[RabbitMQConsumer] Processing error (attempt ${deathCount + 1}):`, err?.message || err);
+        logger.error(`Processing error (attempt ${deathCount + 1})`, { attempt: deathCount + 1, error: err });
 
         if (deathCount >= 3) {
-          console.warn(`[RabbitMQConsumer] Exceeded max retries (3). Routing event to DLQ: ${dlxQueue}`);
+          logger.warn(`Exceeded max retries (3). Routing event to DLQ: ${dlxQueue}`, { dlxQueue });
           this.channel?.publish(dlxExchange, 'dlq.onboarding', msg.content, { persistent: true });
           this.channel?.ack(msg);
         } else {

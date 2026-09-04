@@ -8,6 +8,7 @@ export interface DomainEventHeader {
   eventName: string;
   occurredAt: string; // ISO 8601 timestamp
   version: string;
+  correlationId?: string;
 }
 
 export interface UserRegisteredPayload {

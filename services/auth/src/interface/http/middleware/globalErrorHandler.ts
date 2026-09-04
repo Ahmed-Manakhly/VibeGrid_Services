@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { createLogger } from '../../../infrastructure/logging/logger';
 import {
   InvalidCredentialsError,
   UserNotFoundError,
@@ -12,9 +13,11 @@ import {
   RateLimitError
 } from '../../../application/errors/errors';
 
+const logger = createLogger('vibegrid-auth');
+
 export function globalErrorHandler(
   err: any,
-  _req: Request,
+  req: Request,
   res: Response,
   _next: NextFunction
 ): void {
@@ -22,6 +25,8 @@ export function globalErrorHandler(
   if (res.headersSent) {
     return _next(err);
   }
+
+  const correlationId = (req?.headers?.['x-request-id'] || req?.headers?.['x-correlation-id']) as string | undefined;
 
   let statusCode = 500;
   let clientMessage = 'Internal server error';
@@ -71,7 +76,7 @@ export function globalErrorHandler(
 
   // Log 500 internal errors for diagnostics
   if (statusCode === 500) {
-    console.error('❌ [Unhandled Server Error]:', err);
+    logger.error('Unhandled Server Error', { error: err, correlationId, url: req.url, method: req.method });
   }
 
   res.status(statusCode).json({ error: clientMessage });
