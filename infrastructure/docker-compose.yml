@@ -166,6 +166,28 @@ services:
     networks:
       - vibegrid_net
 
+  # Realtime Gateway Microservice (Socket.io + Redis Pub/Sub)
+  vibegrid_realtime:
+    build:
+      context: ../services/realtime
+      dockerfile: Dockerfile
+    container_name: vibegrid_realtime
+    restart: unless-stopped
+    environment:
+      PORT: 8005
+      NODE_ENV: production
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret}@vibegrid_redis:6379
+      JWT_PUBLIC_KEY_PATH: /app/secrets/jwt.public.key
+    volumes:
+      - ../services/auth/secrets:/app/secrets:ro
+    ports:
+      - "127.0.0.1:8005:8005"
+    depends_on:
+      vibegrid_redis:
+        condition: service_healthy
+    networks:
+      - vibegrid_net
+
   # Nginx API Gateway
   vibegrid_api_gateway:
     image: nginx:alpine
@@ -181,6 +203,7 @@ services:
       - vibegrid_redis
       - vibegrid_rabbitmq
       - vibegrid_auth
+      - vibegrid_realtime
     networks:
       - vibegrid_net
 
