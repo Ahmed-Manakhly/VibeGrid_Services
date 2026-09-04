@@ -180,6 +180,35 @@ services:
         aliases:
           - vibegrid_media
 
+  # Email Microservice Container
+  vibegrid_email_dev:
+    build:
+      context: ../services/email
+      dockerfile: Dockerfile
+    container_name: vibegrid_email_dev
+    restart: unless-stopped
+    environment:
+      PORT: 8003
+      NODE_ENV: docker_development
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@vibegrid_rabbitmq:5672
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret}@vibegrid_redis:6379
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      EMAIL_FROM: ${EMAIL_FROM}
+    ports:
+      - "8003:8003"
+    depends_on:
+      vibegrid_rabbitmq:
+        condition: service_healthy
+      vibegrid_redis:
+        condition: service_healthy
+    networks:
+      vibegrid_net:
+        aliases:
+          - vibegrid_email
+
   # Nginx API Gateway (routes http://localhost:8000/api/auth/* -> vibegrid_auth_dev)
   vibegrid_api_gateway:
     image: nginx:alpine
