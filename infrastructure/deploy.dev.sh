@@ -84,14 +84,37 @@ done
 
 echo "✅ Auth Service is ready! (after ${WAITED}s)"
 
+# ── 5. Wait for media service to be ready ──────────────────────
+echo ""
+echo "[4/4] Waiting for Media Service to be ready..."
+MEDIA_HEALTH_URL="http://localhost:8002/health"
+MEDIA_WAITED=0
+
+until curl -s -o /dev/null -w "%{http_code}" "$MEDIA_HEALTH_URL" | grep -q "200"; do
+  if [ $MEDIA_WAITED -ge $MAX_WAIT ]; then
+    echo "⚠️  Media Service did not respond in ${MAX_WAIT}s. Check logs:"
+    echo "    docker logs -f vibegrid_media_dev"
+    break
+  fi
+  sleep 2
+  MEDIA_WAITED=$((MEDIA_WAITED + 2))
+  echo "   Still waiting for Media Service... (${MEDIA_WAITED}s)"
+done
+
+if [ $MEDIA_WAITED -lt $MAX_WAIT ]; then
+  echo "✅ Media Service is ready! (after ${MEDIA_WAITED}s)"
+fi
+
 # ── Summary ────────────────────────────────────────────────────
 echo ""
 echo "=============================================="
 echo " ✅ Dev Stack Running!"
 echo "=============================================="
+echo " API Gateway:      http://localhost:8000"
 echo " Auth Service:     http://localhost:8001"
 echo " Auth Health:      http://localhost:8001/health"
-echo " Auth Readiness:   http://localhost:8001/ready"
+echo " Media Service:    http://localhost:8002"
+echo " Media Health:     http://localhost:8002/health"
 echo " MongoDB:          localhost:27017"
 echo " Redis:            localhost:6379"
 echo " RabbitMQ AMQP:    localhost:5672"
@@ -100,6 +123,7 @@ echo " PostgreSQL:       localhost:5432"
 echo " MinIO API:        localhost:9000"
 echo " MinIO Console:    http://localhost:9001"
 echo ""
-echo " Logs:             docker logs -f vibegrid_auth_dev"
-echo " Stop:             docker compose -f infrastructure/docker-compose.yml down"
+echo " Logs Auth:        docker logs -f vibegrid_auth_dev"
+echo " Logs Media:       docker logs -f vibegrid_media_dev"
+echo " Stop:             docker compose -f infrastructure/docker-compose.dev.yml down"
 echo "=============================================="

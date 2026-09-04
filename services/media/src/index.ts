@@ -29,6 +29,8 @@ app.use(cookieParser());
 // Health & Readiness
 app.get('/health', (req, res) => res.json({ status: 'healthy', service: 'media' }));
 app.get('/ready', (req, res) => res.json({ status: 'ready', service: 'media' }));
+app.get('/api/media/health', (req, res) => res.json({ status: 'healthy', service: 'media' }));
+app.get('/api/media/ready', (req, res) => res.json({ status: 'ready', service: 'media' }));
 
 // DI Setup
 const internalEp = process.env.MINIO_INTERNAL_ENDPOINT || 'http://vibegrid_minio:9000';

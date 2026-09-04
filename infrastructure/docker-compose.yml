@@ -136,6 +136,36 @@ services:
     networks:
       - vibegrid_net
 
+  # Media Microservice (Express + MongoDB + MinIO)
+  vibegrid_media:
+    build:
+      context: ../services/media
+      dockerfile: Dockerfile
+    container_name: vibegrid_media
+    restart: unless-stopped
+    environment:
+      PORT: 3002
+      NODE_ENV: production
+      MONGO_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-admin_secret}@vibegrid_mongo:27017/media_db?authSource=admin
+      MINIO_INTERNAL_ENDPOINT: http://vibegrid_minio:9000
+      MINIO_PUBLIC_ENDPOINT: http://localhost:9000
+      MINIO_REGION: us-east-1
+      MINIO_USER: ${MINIO_USER:-minioadmin}
+      MINIO_PASS: ${MINIO_PASS:-minioadmin}
+      MINIO_BUCKET: vibegrid-media
+      JWT_PUBLIC_KEY_PATH: /app/secrets/jwt.public.key
+    volumes:
+      - ../services/auth/secrets:/app/secrets:ro
+    ports:
+      - "127.0.0.1:8002:3002"
+    depends_on:
+      vibegrid_mongo:
+        condition: service_healthy
+      vibegrid_minio:
+        condition: service_healthy
+    networks:
+      - vibegrid_net
+
   # Nginx API Gateway
   vibegrid_api_gateway:
     image: nginx:alpine

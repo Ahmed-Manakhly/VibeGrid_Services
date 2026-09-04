@@ -21,11 +21,14 @@ export class MediaController {
         return;
       }
 
-      const { mimeType, fileSizeBytes, purpose = 'avatar' } = req.body;
+      const { mimeType, fileSizeBytes, size, purpose = 'avatar' } = req.body;
+      const rawSize = fileSizeBytes !== undefined ? fileSizeBytes : size;
+      const parsedSize = Number(rawSize);
+
       const result = await this.createUploadIntentUseCase.execute({
         ownerId: req.user.userId,
         mimeType,
-        fileSizeBytes: Number(fileSizeBytes),
+        fileSizeBytes: isNaN(parsedSize) ? 0 : parsedSize,
         purpose: purpose as MediaPurpose,
       });
 

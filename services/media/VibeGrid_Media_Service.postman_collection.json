@@ -1,0 +1,168 @@
+{
+	"info": {
+		"_postman_id": "vibegrid-media-service-collection",
+		"name": "VibeGrid Media Microservice",
+		"description": "Postman Collection for testing VibeGrid Media Microservice directly (port 8002) and via API Gateway (port 8000).",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Direct - Health Check",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8002/health",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8002",
+					"path": [
+						"health"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "2. Gateway - Health Check",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/api/media/health",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"media",
+						"health"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "3. Gateway - Request Upload Intent (Avatar Image)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"filename\": \"test_avatar.jpg\",\n  \"mimeType\": \"image/jpeg\",\n  \"size\": 1048576,\n  \"purpose\": \"avatar\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8000/api/media/upload-intent",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"media",
+						"upload-intent"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "4. Gateway - Request Upload Intent (Post Video)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"filename\": \"demo_video.mp4\",\n  \"mimeType\": \"video/mp4\",\n  \"size\": 26214400,\n  \"purpose\": \"post_attachment\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8000/api/media/upload-intent",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"media",
+						"upload-intent"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "5. Gateway - Confirm Upload",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"assetId\": \"{{last_asset_id}}\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8000/api/media/confirm-upload",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"media",
+						"confirm-upload"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "6. Gateway - Get Asset Metadata",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/api/media/assets/:assetId",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"media",
+						"assets",
+						":assetId"
+					],
+					"variable": [
+						{
+							"key": "assetId",
+							"value": "ast_12345"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
