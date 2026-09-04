@@ -91,4 +91,16 @@ describe('MediaFileConfig Value Object', () => {
     const elevenMb = 11 * 1024 * 1024;
     expect(() => MediaFileConfig.validate('image/png', elevenMb, 'avatar')).toThrow(InvalidMediaFileError);
   });
+
+  it('should accept valid post_attachment image and video MIME types and sizes', () => {
+    expect(() => MediaFileConfig.validate('image/jpeg', 5 * 1024 * 1024, 'post_attachment')).not.toThrow();
+    expect(() => MediaFileConfig.validate('video/mp4', 50 * 1024 * 1024, 'post_attachment')).not.toThrow();
+    expect(() => MediaFileConfig.validate('video/webm', 99 * 1024 * 1024, 'post_attachment')).not.toThrow();
+    expect(() => MediaFileConfig.validate('video/quicktime', 10 * 1024 * 1024, 'post_attachment')).not.toThrow();
+  });
+
+  it('should reject post_attachment file sizes > 100MB', () => {
+    const oneHundredOneMb = 101 * 1024 * 1024;
+    expect(() => MediaFileConfig.validate('video/mp4', oneHundredOneMb, 'post_attachment')).toThrow(InvalidMediaFileError);
+  });
 });
