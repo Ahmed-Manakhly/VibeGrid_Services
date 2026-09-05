@@ -1,9 +1,11 @@
 import amqp, { Channel, ConsumeMessage } from 'amqplib';
-import { createLogger } from '../../../../../shared/logger';
 import { ProcessEmailEventUseCase } from '../../application/use-cases/ProcessEmailEvent.usecase';
 
-const logger = createLogger('vibegrid-email');
-
+const logger = {
+  info: (msg: string, meta?: any) => console.log(`[INFO] ${msg}`, meta ? JSON.stringify(meta) : ''),
+  error: (msg: string, meta?: any) => console.error(`[ERROR] ${msg}`, meta ? JSON.stringify(meta) : ''),
+  warn: (msg: string, meta?: any) => console.warn(`[WARN] ${msg}`, meta ? JSON.stringify(meta) : ''),
+};
 export interface RabbitMQConsumerConfig {
   url: string;
   exchange: string;
