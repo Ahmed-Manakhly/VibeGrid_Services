@@ -19,7 +19,7 @@ describe('Realtime Gateway — Socket Authentication & Authorization Tests', () 
     getUserStatus: jest.fn().mockResolvedValue({ online: true, connectionCount: 1 }),
   };
 
-  beforeAll((done) => {
+  beforeAll((done: jest.DoneCallback) => {
     const app = express();
     server = http.createServer(app);
     authenticator = new SocketJwtAuthenticator(undefined, TEST_PUBLIC_KEY);
@@ -51,7 +51,7 @@ describe('Realtime Gateway — Socket Authentication & Authorization Tests', () 
     jest.clearAllMocks();
   });
 
-  it('should authenticate connection with valid RS256 token in handshake auth', (done) => {
+  it('should authenticate connection with valid RS256 token in handshake auth', (done: jest.DoneCallback) => {
     const token = jwt.sign(
       { sub: 'user_test_123', email: 'test@vibegrid.com', role: 'USER' },
       TEST_PRIVATE_KEY,
@@ -70,7 +70,7 @@ describe('Realtime Gateway — Socket Authentication & Authorization Tests', () 
     });
   });
 
-  it('should authenticate connection with valid RS256 token in handshake query', (done) => {
+  it('should authenticate connection with valid RS256 token in handshake query', (done: jest.DoneCallback) => {
     const token = jwt.sign(
       { sub: 'user_query_456', email: 'query@vibegrid.com', role: 'USER' },
       TEST_PRIVATE_KEY,
@@ -89,7 +89,7 @@ describe('Realtime Gateway — Socket Authentication & Authorization Tests', () 
     });
   });
 
-  it('should reject socket connection when token is missing', (done) => {
+  it('should reject socket connection when token is missing', (done: jest.DoneCallback) => {
     clientSocket = Client(`http://localhost:${port}`, {
       path: '/socket.io/',
     });
@@ -101,7 +101,7 @@ describe('Realtime Gateway — Socket Authentication & Authorization Tests', () 
     });
   });
 
-  it('should reject socket connection when token signature is invalid', (done) => {
+  it('should reject socket connection when token signature is invalid', (done: jest.DoneCallback) => {
     const invalidToken = jwt.sign({ sub: 'user_hacker' }, 'wrong_secret', { algorithm: 'HS256' });
 
     clientSocket = Client(`http://localhost:${port}`, {

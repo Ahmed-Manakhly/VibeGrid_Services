@@ -21,7 +21,7 @@ describe('Realtime Gateway — Cross-Instance Redis Pub/Sub Event Broadcast Test
     getUserStatus: jest.fn().mockResolvedValue({ online: true, connectionCount: 1 }),
   };
 
-  beforeAll((done) => {
+  beforeAll((done: jest.DoneCallback) => {
     const authenticator = new SocketJwtAuthenticator(undefined, TEST_PUBLIC_KEY);
 
     // Node A
@@ -59,7 +59,7 @@ describe('Realtime Gateway — Cross-Instance Redis Pub/Sub Event Broadcast Test
     await new Promise<void>((resolve) => serverB.close(() => resolve()));
   });
 
-  it('should deliver notification:new to client connected on Node B when emitted targeting room user:target_user', (done) => {
+  it('should deliver notification:new to client connected on Node B when emitted targeting room user:target_user', (done: jest.DoneCallback) => {
     const token = jwt.sign(
       { sub: 'target_user_789', email: 'target@vibegrid.com', role: 'USER' },
       TEST_PRIVATE_KEY,
@@ -95,7 +95,7 @@ describe('Realtime Gateway — Cross-Instance Redis Pub/Sub Event Broadcast Test
     });
   });
 
-  it('should deliver feed:updated to client connected on Node B', (done) => {
+  it('should deliver feed:updated to client connected on Node B', (done: jest.DoneCallback) => {
     const token = jwt.sign(
       { sub: 'target_user_789', email: 'target@vibegrid.com', role: 'USER' },
       TEST_PRIVATE_KEY,
