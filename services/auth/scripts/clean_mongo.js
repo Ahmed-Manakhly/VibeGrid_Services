@@ -1,6 +1,8 @@
 require('dotenv').config();
 const { MongoClient } = require('mongodb');
 
+const includeAdmins = process.argv.includes('--include-admins');
+
 async function cleanMongo() {
   const uri = process.env.MONGO_URI;
   if (!uri) {
@@ -11,19 +13,27 @@ async function cleanMongo() {
   const client = new MongoClient(uri);
   try {
     await client.connect();
+    console.log('\n🔥 FULL MONGO WIPE — starting...');
     const db = client.db();
-    const collection = db.collection('users');
+    const collection = db.collection('userauths'); // Mongoose defaults to lowercase + 's'
 
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@vibegrid.manakhly.tech';
-    const devEmail = process.env.DEV_USER_EMAIL || 'dev@vibegrid.manakhly.tech';
+    let result;
+    if (includeAdmins) {
+      result = await collection.deleteMany({});
+      console.log(`   ✅ Auth Users         — deleted ${result.deletedCount} row(s)`);
+      console.log('\n🔥 Full wipe complete. ALL users deleted, including Admins.');
+    } else {
+      const adminEmail = process.env.ADMIN_EMAIL || 'admin@vibegrid.manakhly.tech';
+      const devEmail = process.env.DEV_USER_EMAIL || 'dev@vibegrid.manakhly.tech';
+      // Also preserve the old local one just in case
+      const oldAdmin = 'admin@vibegrid.local';
 
-    const result = await collection.deleteMany({
-      email: { $nin: [adminEmail, devEmail] }
-    });
-
-    console.log(`\n🔥 FULL MONGO WIPE — starting...`);
-    console.log(`   ✅ Auth Users         — deleted ${result.deletedCount} row(s)`);
-    console.log(`\n🔥 Full wipe complete. Preserved: ${adminEmail}, ${devEmail}\n`);
+      result = await collection.deleteMany({
+        email: { $nin: [adminEmail, devEmail, oldAdmin] }
+      });
+      console.log(`   ✅ Auth Users         — deleted ${result.deletedCount} row(s)`);
+      console.log(`\n🔥 Full wipe complete. Preserved: ${adminEmail}, ${devEmail}`);
+    }
   } catch (err) {
     console.error('❌ Error cleaning Mongo:', err);
   } finally {
