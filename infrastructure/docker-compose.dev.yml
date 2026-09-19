@@ -1,5 +1,7 @@
 # ─── DOCKER DEV COMPOSE ──────────────────────────────────────────────────────
-# Runs vibegrid_auth_dev INSIDE Docker alongside DB containers for local dev.
+# Runs infrastructure DBs & dev microservices INSIDE Docker for local dev.
+# Exposes DB ports to host so host processes ('npm run dev') can connect.
+# Mounts ./uploads:/data so MinIO shares local host upload directory.
 # Usage: bash infrastructure/deploy.dev.sh
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -9,6 +11,8 @@ services:
     image: postgres:16-alpine
     container_name: vibegrid_postgres
     restart: unless-stopped
+    env_file:
+      - ../.env
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-vibegrid}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vibegrid_secret}
@@ -30,6 +34,8 @@ services:
     image: mongo:7.0
     container_name: vibegrid_mongo
     restart: unless-stopped
+    env_file:
+      - ../.env
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-admin_secret}
@@ -69,6 +75,8 @@ services:
     image: rabbitmq:3.12-management-alpine
     container_name: vibegrid_rabbitmq
     restart: unless-stopped
+    env_file:
+      - ../.env
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
@@ -85,12 +93,14 @@ services:
     networks:
       - vibegrid_net
 
-  # MinIO
+  # MinIO (Mounts local host repo ./uploads directory)
   vibegrid_minio:
     image: minio/minio
     container_name: vibegrid_minio
     restart: unless-stopped
     entrypoint: sh -c 'minio server /data --console-address ":9001"'
+    env_file:
+      - ../.env
     environment:
       MINIO_ROOT_USER: ${MINIO_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_PASS:-minioadmin}
@@ -115,31 +125,16 @@ services:
       dockerfile: Dockerfile
     container_name: vibegrid_auth_dev
     restart: unless-stopped
+    env_file:
+      - ../.env
     environment:
       PORT: 8001
       NODE_ENV: docker_development
-      MONGO_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-admin_secret}@vibegrid_mongo:27017/auth_db?authSource=admin
+      MONGO_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-admin_secret}@vibegrid_mongo:27017/${MONGO_AUTH_DB:-auth_db}?authSource=admin
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@vibegrid_rabbitmq:5672
       JWT_PRIVATE_KEY_PATH: /app/secrets/jwt.private.key
       JWT_PUBLIC_KEY_PATH: /app/secrets/jwt.public.key
       COOKIE_DOMAIN: localhost
-      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER}
-      SMTP_PASS: ${SMTP_PASS}
-      EMAIL_FROM: ${EMAIL_FROM}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
-      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
-      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
-      GITHUB_REDIRECT_URI: ${GITHUB_REDIRECT_URI}
-      ADMIN_EMAIL: ${ADMIN_EMAIL}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
-      ADMIN_NAME: ${ADMIN_NAME}
-      DEV_USER_EMAIL: ${DEV_USER_EMAIL}
-      DEV_USER_PASSWORD: ${DEV_USER_PASSWORD}
-      DEV_USER_NAME: ${DEV_USER_NAME}
     volumes:
       - ../services/auth/secrets:/app/secrets:ro
     ports:
@@ -154,17 +149,19 @@ services:
         aliases:
           - vibegrid_auth
 
-  # Media Microservice Container
+  # Dev Media Microservice Container
   vibegrid_media_dev:
     build:
       context: ../services/media
       dockerfile: Dockerfile
     container_name: vibegrid_media_dev
     restart: unless-stopped
+    env_file:
+      - ../.env
     environment:
       PORT: 8002
       NODE_ENV: docker_development
-      MONGO_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-admin_secret}@vibegrid_mongo:27017/media_db?authSource=admin
+      MONGO_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-admin_secret}@vibegrid_mongo:27017/${MONGO_MEDIA_DB:-media_db}?authSource=admin
       MINIO_INTERNAL_ENDPOINT: http://vibegrid_minio:9000
       MINIO_PUBLIC_ENDPOINT: http://localhost:9000
       MINIO_REGION: us-east-1
@@ -186,23 +183,20 @@ services:
         aliases:
           - vibegrid_media
 
-  # Email Microservice Container
+  # Dev Email Microservice Container
   vibegrid_email_dev:
     build:
       context: ../services/email
       dockerfile: Dockerfile
     container_name: vibegrid_email_dev
     restart: unless-stopped
+    env_file:
+      - ../.env
     environment:
       PORT: 8003
       NODE_ENV: docker_development
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@vibegrid_rabbitmq:5672
       REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret}@vibegrid_redis:6379
-      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER}
-      SMTP_PASS: ${SMTP_PASS}
-      EMAIL_FROM: ${EMAIL_FROM}
     ports:
       - "8003:8003"
     depends_on:
@@ -215,13 +209,15 @@ services:
         aliases:
           - vibegrid_email
 
-  # Onboarding Worker Container
+  # Dev Onboarding Worker Container
   vibegrid_onboarding_dev:
     build:
       context: ../services/onboarding
       dockerfile: Dockerfile
     container_name: vibegrid_onboarding_dev
     restart: unless-stopped
+    env_file:
+      - ../.env
     environment:
       PORT: 8004
       NODE_ENV: docker_development
@@ -242,13 +238,15 @@ services:
         aliases:
           - vibegrid_onboarding
 
-  # Realtime Gateway Container
+  # Dev Realtime Gateway Container
   vibegrid_realtime_dev:
     build:
       context: ../services/realtime
       dockerfile: Dockerfile
     container_name: vibegrid_realtime_dev
     restart: unless-stopped
+    env_file:
+      - ../.env
     environment:
       PORT: 8005
       NODE_ENV: docker_development
@@ -288,8 +286,6 @@ services:
     networks:
       - vibegrid_net
 
-
-
 networks:
   vibegrid_net:
     name: vibegrid_net
@@ -300,4 +296,3 @@ volumes:
   mongo_data:
   redis_data:
   rabbitmq_data:
-  minio_data:

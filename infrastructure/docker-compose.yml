@@ -1,14 +1,17 @@
 # ─── PRODUCTION DOCKER COMPOSE ────────────────────────────────────────────────
 # Used on production VPS (deploy.sh).
-# DB ports are NOT exposed to the host/internet — isolated inside vibegrid_net.
+# DB and microservice ports are NOT exposed to the host/internet.
+# Services isolate inside vibegrid_net and route via API Gateway (127.0.0.1:8000).
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:
-  # PostgreSQL (Primary Relational Store for Next.js BFF & Outbox)
+  # PostgreSQL (Primary Relational Store for Next.js BFF & Onboarding)
   vibegrid_postgres:
     image: postgres:16-alpine
     container_name: vibegrid_postgres
     restart: unless-stopped
+    env_file:
+      - ../.env
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-vibegrid}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vibegrid_secret}
@@ -20,16 +23,16 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    ports:
-      - "5432:5432"
     networks:
       - vibegrid_net
 
-  # MongoDB (Document Store for Auth Service Credentials & Tokens)
+  # MongoDB (Document Store for Auth & Media Services)
   vibegrid_mongo:
     image: mongo:7.0
     container_name: vibegrid_mongo
     restart: unless-stopped
+    env_file:
+      - ../.env
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-admin_secret}
@@ -44,7 +47,7 @@ services:
     networks:
       - vibegrid_net
 
-  # Redis (Timeline Cache, Mutex Locks, Socket.io Pub/Sub Adapter)
+  # Redis (Timeline Cache, Mutex Locks, Socket.io Pub/Sub, Idempotency)
   vibegrid_redis:
     image: redis:7-alpine
     container_name: vibegrid_redis
@@ -65,6 +68,8 @@ services:
     image: rabbitmq:3.12-management-alpine
     container_name: vibegrid_rabbitmq
     restart: unless-stopped
+    env_file:
+      - ../.env
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
@@ -84,6 +89,8 @@ services:
     container_name: vibegrid_minio
     restart: unless-stopped
     entrypoint: sh -c 'minio server /data --console-address ":9001"'
+    env_file:
+      - ../.env
     environment:
       MINIO_ROOT_USER: ${MINIO_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_PASS:-minioadmin}
@@ -104,30 +111,17 @@ services:
       dockerfile: Dockerfile
     container_name: vibegrid_auth
     restart: unless-stopped
+    env_file:
+      - ../.env
     environment:
       PORT: 8001
       NODE_ENV: production
-      MONGO_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-admin_secret}@vibegrid_mongo:27017/auth_db?authSource=admin
+      MONGO_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-admin_secret}@vibegrid_mongo:27017/${MONGO_AUTH_DB:-auth_db}?authSource=admin
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@vibegrid_rabbitmq:5672
       JWT_PRIVATE_KEY_PATH: /app/secrets/jwt.private.key
       JWT_PUBLIC_KEY_PATH: /app/secrets/jwt.public.key
-      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@vibegrid.manakhly.tech}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-V1b3Gr1d_Adm!n2026}
-      ADMIN_NAME: ${ADMIN_NAME:-VibeGrid Admin}
-      DEV_USER_EMAIL: ${DEV_USER_EMAIL:-dev@vibegrid.manakhly.tech}
-      DEV_USER_PASSWORD: ${DEV_USER_PASSWORD:-V1b3Gr1d_D3v!2026}
-      DEV_USER_NAME: ${DEV_USER_NAME:-VibeGrid Developer}
-      FIXED_SEED_OTP: ${FIXED_SEED_OTP:-123456}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
-      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
-      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
-      GITHUB_REDIRECT_URI: ${GITHUB_REDIRECT_URI}
     volumes:
       - ../services/auth/secrets:/app/secrets:ro
-    ports:
-      - "127.0.0.1:8001:8001"
     depends_on:
       vibegrid_mongo:
         condition: service_healthy
@@ -143,10 +137,12 @@ services:
       dockerfile: Dockerfile
     container_name: vibegrid_media
     restart: unless-stopped
+    env_file:
+      - ../.env
     environment:
       PORT: 8002
       NODE_ENV: production
-      MONGO_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-admin_secret}@vibegrid_mongo:27017/media_db?authSource=admin
+      MONGO_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-admin_secret}@vibegrid_mongo:27017/${MONGO_MEDIA_DB:-media_db}?authSource=admin
       MINIO_INTERNAL_ENDPOINT: http://vibegrid_minio:9000
       MINIO_PUBLIC_ENDPOINT: http://localhost:9000
       MINIO_REGION: us-east-1
@@ -156,34 +152,10 @@ services:
       JWT_PUBLIC_KEY_PATH: /app/secrets/jwt.public.key
     volumes:
       - ../services/auth/secrets:/app/secrets:ro
-    ports:
-      - "127.0.0.1:8002:8002"
     depends_on:
       vibegrid_mongo:
         condition: service_healthy
       vibegrid_minio:
-        condition: service_healthy
-    networks:
-      - vibegrid_net
-
-  # Realtime Gateway Microservice (Socket.io + Redis Pub/Sub)
-  vibegrid_realtime:
-    build:
-      context: ../services/realtime
-      dockerfile: Dockerfile
-    container_name: vibegrid_realtime
-    restart: unless-stopped
-    environment:
-      PORT: 8005
-      NODE_ENV: production
-      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret}@vibegrid_redis:6379
-      JWT_PUBLIC_KEY_PATH: /app/secrets/jwt.public.key
-    volumes:
-      - ../services/auth/secrets:/app/secrets:ro
-    ports:
-      - "127.0.0.1:8005:8005"
-    depends_on:
-      vibegrid_redis:
         condition: service_healthy
     networks:
       - vibegrid_net
@@ -195,18 +167,13 @@ services:
       dockerfile: Dockerfile
     container_name: vibegrid_email
     restart: unless-stopped
+    env_file:
+      - ../.env
     environment:
       PORT: 8003
       NODE_ENV: production
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@vibegrid_rabbitmq:5672
       REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret}@vibegrid_redis:6379
-      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER}
-      SMTP_PASS: ${SMTP_PASS}
-      EMAIL_FROM: ${EMAIL_FROM}
-    ports:
-      - "127.0.0.1:8003:8003"
     depends_on:
       vibegrid_rabbitmq:
         condition: service_healthy
@@ -222,14 +189,14 @@ services:
       dockerfile: Dockerfile
     container_name: vibegrid_onboarding
     restart: unless-stopped
+    env_file:
+      - ../.env
     environment:
       PORT: 8004
       NODE_ENV: production
       DATABASE_URL: postgresql://${POSTGRES_USER:-vibegrid}:${POSTGRES_PASSWORD:-vibegrid_secret}@vibegrid_postgres:5432/${POSTGRES_DB:-vibegrid_db}?schema=public
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@vibegrid_rabbitmq:5672
       REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret}@vibegrid_redis:6379
-    ports:
-      - "127.0.0.1:8004:8004"
     depends_on:
       vibegrid_postgres:
         condition: service_healthy
@@ -240,7 +207,29 @@ services:
     networks:
       - vibegrid_net
 
-  # Nginx API Gateway
+  # Realtime Gateway Microservice (Socket.io + Redis Pub/Sub)
+  vibegrid_realtime:
+    build:
+      context: ../services/realtime
+      dockerfile: Dockerfile
+    container_name: vibegrid_realtime
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      PORT: 8005
+      NODE_ENV: production
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret}@vibegrid_redis:6379
+      JWT_PUBLIC_KEY_PATH: /app/secrets/jwt.public.key
+    volumes:
+      - ../services/auth/secrets:/app/secrets:ro
+    depends_on:
+      vibegrid_redis:
+        condition: service_healthy
+    networks:
+      - vibegrid_net
+
+  # Nginx API Gateway (Only container bound to localhost port 8000)
   vibegrid_api_gateway:
     image: nginx:alpine
     container_name: vibegrid_api_gateway
