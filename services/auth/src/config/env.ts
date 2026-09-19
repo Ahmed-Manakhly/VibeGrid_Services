@@ -29,13 +29,6 @@ export interface AppConfig {
   cookieDomain?: string;
   fixedSeedOtp?: string;
   tokenExpiry: TokenExpiryConfig;
-  smtp: {
-    host?: string;
-    port?: number;
-    user?: string;
-    pass?: string;
-    from?: string;
-  };
   oauth: OAuthConfig;
   bootstrapAdmin?: {
     email?: string;
@@ -152,13 +145,6 @@ export function loadAndValidateConfig(): AppConfig {
       accessTokenMaxAgeMs: accessTokenExpiresInSec * 1000,
       refreshTokenMaxAgeMs: refreshTokenExpiresInSec * 1000,
       emailVerificationTokenExpiresInSec
-    },
-    smtp: {
-      host: process.env.SMTP_HOST || 'smtp.mailtrap.io',
-      port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 2525,
-      user: process.env.SMTP_USER || '',
-      pass: process.env.SMTP_PASS || '',
-      from: process.env.EMAIL_FROM || '"VibeGrid Support" <noreply@vibegrid.com>'
     },
     oauth: {
       googleClientId: process.env.GOOGLE_CLIENT_ID,

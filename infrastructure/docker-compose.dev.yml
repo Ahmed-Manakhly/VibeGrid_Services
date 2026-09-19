@@ -33,7 +33,7 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-admin_secret}
-      MONGO_INITDB_DATABASE: auth_db
+      MONGO_INITDB_DATABASE: ${MONGO_AUTH_DB:-auth_db}
     ports:
       - "27017:27017"
     volumes:
@@ -162,9 +162,9 @@ services:
     container_name: vibegrid_media_dev
     restart: unless-stopped
     environment:
-      PORT: 3002
-      NODE_ENV: production
-      MONGO_URI: mongodb://admin:VgMongo_A2026%23u7%24YnR%213vTz@vibegrid_mongo:27017/media_db?authSource=admin
+      PORT: 8002
+      NODE_ENV: docker_development
+      MONGO_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-admin_secret}@vibegrid_mongo:27017/media_db?authSource=admin
       MINIO_INTERNAL_ENDPOINT: http://vibegrid_minio:9000
       MINIO_PUBLIC_ENDPOINT: http://localhost:9000
       MINIO_REGION: us-east-1
@@ -175,7 +175,7 @@ services:
     volumes:
       - ../services/auth/secrets:/app/secrets:ro
     ports:
-      - "8002:3002"
+      - "8002:8002"
     depends_on:
       vibegrid_mongo:
         condition: service_healthy
@@ -215,7 +215,58 @@ services:
         aliases:
           - vibegrid_email
 
-  # Nginx API Gateway (routes http://localhost:8000/api/auth/* -> vibegrid_auth_dev)
+  # Onboarding Worker Container
+  vibegrid_onboarding_dev:
+    build:
+      context: ../services/onboarding
+      dockerfile: Dockerfile
+    container_name: vibegrid_onboarding_dev
+    restart: unless-stopped
+    environment:
+      PORT: 8004
+      NODE_ENV: docker_development
+      DATABASE_URL: postgresql://${POSTGRES_USER:-vibegrid}:${POSTGRES_PASSWORD:-vibegrid_secret}@vibegrid_postgres:5432/${POSTGRES_DB:-vibegrid_db}?schema=public
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@vibegrid_rabbitmq:5672
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret}@vibegrid_redis:6379
+    ports:
+      - "8004:8004"
+    depends_on:
+      vibegrid_postgres:
+        condition: service_healthy
+      vibegrid_rabbitmq:
+        condition: service_healthy
+      vibegrid_redis:
+        condition: service_healthy
+    networks:
+      vibegrid_net:
+        aliases:
+          - vibegrid_onboarding
+
+  # Realtime Gateway Container
+  vibegrid_realtime_dev:
+    build:
+      context: ../services/realtime
+      dockerfile: Dockerfile
+    container_name: vibegrid_realtime_dev
+    restart: unless-stopped
+    environment:
+      PORT: 8005
+      NODE_ENV: docker_development
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret}@vibegrid_redis:6379
+      JWT_PUBLIC_KEY_PATH: /app/secrets/jwt.public.key
+    volumes:
+      - ../services/auth/secrets:/app/secrets:ro
+    ports:
+      - "8005:8005"
+    depends_on:
+      vibegrid_redis:
+        condition: service_healthy
+    networks:
+      vibegrid_net:
+        aliases:
+          - vibegrid_realtime
+
+  # Nginx API Gateway
   vibegrid_api_gateway:
     image: nginx:alpine
     container_name: vibegrid_api_gateway
@@ -230,6 +281,10 @@ services:
       - vibegrid_redis
       - vibegrid_rabbitmq
       - vibegrid_auth_dev
+      - vibegrid_media_dev
+      - vibegrid_email_dev
+      - vibegrid_onboarding_dev
+      - vibegrid_realtime_dev
     networks:
       - vibegrid_net
 

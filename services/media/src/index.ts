@@ -2,8 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import mongoose from 'mongoose';
-import path from 'path';
-import dotenv from 'dotenv';
 
 import { MinioS3StorageProvider } from './infrastructure/storage/MinioS3StorageProvider';
 import { MongoMediaAssetRepository } from './infrastructure/persistence/MongoMediaAssetRepository';
@@ -16,10 +14,10 @@ import { GetMediaAssetUseCase } from './application/use-cases/GetMediaAssetUseCa
 import { createMediaAuthMiddleware } from './interface/http/middleware/mediaAuthMiddleware';
 import { MediaController } from './interface/http/controllers/MediaController';
 
-dotenv.config();
+import { loadAndValidateMediaConfig } from './config/env.config';
 
+const config = loadAndValidateMediaConfig();
 const app = express();
-const port = parseInt(process.env.PORT || '3002', 10);
 const logger = new WinstonLogger();
 
 app.use(cors({ origin: true, credentials: true }));
@@ -33,16 +31,13 @@ app.get('/api/media/health', (req, res) => res.json({ status: 'healthy', service
 app.get('/api/media/ready', (req, res) => res.json({ status: 'ready', service: 'media' }));
 
 // DI Setup
-const internalEp = process.env.MINIO_INTERNAL_ENDPOINT || 'http://vibegrid_minio:9000';
-const publicEp = process.env.MINIO_PUBLIC_ENDPOINT || 'http://localhost:9000';
-
 const storageProvider = new MinioS3StorageProvider({
-  internalEndpoint: internalEp,
-  publicEndpoint: publicEp,
-  region: process.env.MINIO_REGION || 'us-east-1',
-  accessKeyId: process.env.MINIO_USER || 'minioadmin',
-  secretAccessKey: process.env.MINIO_PASS || 'minioadmin',
-  bucketName: process.env.MINIO_BUCKET || 'vibegrid-media',
+  internalEndpoint: config.minio.internalEndpoint,
+  publicEndpoint: config.minio.publicEndpoint,
+  region: config.minio.region,
+  accessKeyId: config.minio.user,
+  secretAccessKey: config.minio.pass,
+  bucketName: config.minio.bucket,
 });
 
 const mediaRepo = new MongoMediaAssetRepository();
@@ -52,7 +47,7 @@ const confirmUploadUseCase = new ConfirmUploadUseCase(mediaRepo, storageProvider
 const getMediaAssetUseCase = new GetMediaAssetUseCase(mediaRepo, storageProvider);
 
 const controller = new MediaController(createUploadIntentUseCase, confirmUploadUseCase, getMediaAssetUseCase);
-const authMiddleware = createMediaAuthMiddleware();
+const authMiddleware = createMediaAuthMiddleware(config.jwtPublicKeyPath);
 
 // Express Router wiring
 app.post('/api/media/upload-intent', authMiddleware, controller.uploadIntent);
@@ -60,13 +55,12 @@ app.post('/api/media/confirm-upload', authMiddleware, controller.confirmUpload);
 app.get('/api/media/assets/:assetId', authMiddleware, controller.getAsset);
 
 async function startServer() {
-  const mongoUri = process.env.MONGO_URI || 'mongodb://admin:VgMongo_A2026%23u7%24YnR%213vTz@localhost:27017/media_db?authSource=admin';
   try {
-    await mongoose.connect(mongoUri);
+    await mongoose.connect(config.mongoUri);
     logger.info('Connected to Media MongoDB');
 
-    app.listen(port, () => {
-      logger.info(`Media Microservice listening on port ${port}`);
+    app.listen(config.port, () => {
+      logger.info(`Media Microservice listening on port ${config.port}`);
     });
   } catch (err: any) {
     logger.error('Failed to start Media Microservice', { error: err.message });
@@ -74,7 +68,7 @@ async function startServer() {
   }
 }
 
-if (process.env.NODE_ENV !== 'test') {
+if (config.nodeEnv !== 'test') {
   startServer();
 }
 

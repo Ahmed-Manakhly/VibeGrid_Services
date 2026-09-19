@@ -1,9 +1,7 @@
-import dotenv from 'dotenv';
-dotenv.config();
-
 import express from 'express';
 import Redis from 'ioredis';
 import { PrismaClient } from '@prisma/client';
+import { loadAndValidateOnboardingConfig } from './config/env.config';
 import { PrismaProfileRepository } from './infrastructure/persistence/PrismaProfileRepository';
 import { RedisIdempotencyRepository } from './infrastructure/persistence/RedisIdempotencyRepository';
 import { ProcessOnboardingEventUseCase } from './application/use-cases/ProcessOnboardingEvent.usecase';
@@ -11,18 +9,22 @@ import { RabbitMQConsumer } from './infrastructure/messaging/RabbitMQConsumer';
 import { HealthController } from './interface/controllers/HealthController';
 
 async function bootstrap() {
-  const port = process.env.PORT || 8004;
-  const rabbitUrl = process.env.RABBITMQ_URL || 'amqp://vibegrid:VgRabbit_MQ2026%23b5%24WvL%212jRx@localhost:5672';
-  const redisUrl = process.env.REDIS_URL || 'redis://:VgRedis_R2026%23m4%24ZpQ%219wKx@localhost:6379';
+  const config = loadAndValidateOnboardingConfig();
 
   console.log('🚀 Starting VibeGrid Onboarding Worker...');
 
   // 1. Redis & Prisma Connections
-  const redisClient = new Redis(redisUrl);
+  const redisClient = new Redis(config.redisUrl);
   redisClient.on('connect', () => console.log('✅ Connected to Redis for Onboarding Idempotency'));
   redisClient.on('error', (err) => console.error('❌ Redis Connection Error:', err));
 
-  const prisma = new PrismaClient();
+  const prisma = new PrismaClient({
+    datasources: {
+      db: {
+        url: config.databaseUrl,
+      },
+    },
+  });
 
   // 2. Application Repositories & Use Cases
   const profileRepo = new PrismaProfileRepository(prisma);
@@ -32,7 +34,7 @@ async function bootstrap() {
   // 3. RabbitMQ Consumer
   const rabbitConsumer = new RabbitMQConsumer(
     {
-      url: rabbitUrl,
+      url: config.rabbitUrl,
       exchange: 'domain.events',
       queue: 'q.user.onboarding',
       dlxExchange: 'dlx.domain.events',
@@ -52,8 +54,8 @@ async function bootstrap() {
 
   app.get('/health', HealthController.getHealth);
 
-  const server = app.listen(port, () => {
-    console.log(`✅ Onboarding Worker health server running on port ${port}`);
+  const server = app.listen(config.port, () => {
+    console.log(`✅ Onboarding Worker health server running on port ${config.port}`);
   });
 
   // Graceful Shutdown

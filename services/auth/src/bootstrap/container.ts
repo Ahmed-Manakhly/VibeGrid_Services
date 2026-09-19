@@ -52,7 +52,7 @@ export function createContainer(config: AppConfig, eventPublisher: RabbitMQPubli
   const refreshTokenRepo = new MongoRefreshTokenRepo();
   const revokedTokenRepo = new MongoRevokedTokenRepo();
   const emailTokenRepo = new MongoEmailTokenRepo();
-  const emailSender = new NodemailerEmailSender(config.smtp);
+  const emailSender = new NodemailerEmailSender();
   const hasher = new Argon2Hasher();
   const tokenSigner = new RS256TokenSigner(
     config.jwtPrivateKeyPath,

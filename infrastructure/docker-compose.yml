@@ -33,7 +33,7 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-admin_secret}
-      MONGO_INITDB_DATABASE: auth_db
+      MONGO_INITDB_DATABASE: ${MONGO_AUTH_DB:-auth_db}
     volumes:
       - mongo_data:/data/db
     healthcheck:
@@ -144,7 +144,7 @@ services:
     container_name: vibegrid_media
     restart: unless-stopped
     environment:
-      PORT: 3002
+      PORT: 8002
       NODE_ENV: production
       MONGO_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-admin_secret}@vibegrid_mongo:27017/media_db?authSource=admin
       MINIO_INTERNAL_ENDPOINT: http://vibegrid_minio:9000
@@ -157,7 +157,7 @@ services:
     volumes:
       - ../services/auth/secrets:/app/secrets:ro
     ports:
-      - "127.0.0.1:8002:3002"
+      - "127.0.0.1:8002:8002"
     depends_on:
       vibegrid_mongo:
         condition: service_healthy
@@ -188,6 +188,58 @@ services:
     networks:
       - vibegrid_net
 
+  # Email Microservice Worker (Express + RabbitMQ + Redis + Nodemailer)
+  vibegrid_email:
+    build:
+      context: ../services/email
+      dockerfile: Dockerfile
+    container_name: vibegrid_email
+    restart: unless-stopped
+    environment:
+      PORT: 8003
+      NODE_ENV: production
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@vibegrid_rabbitmq:5672
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret}@vibegrid_redis:6379
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      EMAIL_FROM: ${EMAIL_FROM}
+    ports:
+      - "127.0.0.1:8003:8003"
+    depends_on:
+      vibegrid_rabbitmq:
+        condition: service_healthy
+      vibegrid_redis:
+        condition: service_healthy
+    networks:
+      - vibegrid_net
+
+  # Onboarding Worker Microservice (Express + Postgres + RabbitMQ + Redis)
+  vibegrid_onboarding:
+    build:
+      context: ../services/onboarding
+      dockerfile: Dockerfile
+    container_name: vibegrid_onboarding
+    restart: unless-stopped
+    environment:
+      PORT: 8004
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-vibegrid}:${POSTGRES_PASSWORD:-vibegrid_secret}@vibegrid_postgres:5432/${POSTGRES_DB:-vibegrid_db}?schema=public
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@vibegrid_rabbitmq:5672
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret}@vibegrid_redis:6379
+    ports:
+      - "127.0.0.1:8004:8004"
+    depends_on:
+      vibegrid_postgres:
+        condition: service_healthy
+      vibegrid_rabbitmq:
+        condition: service_healthy
+      vibegrid_redis:
+        condition: service_healthy
+    networks:
+      - vibegrid_net
+
   # Nginx API Gateway
   vibegrid_api_gateway:
     image: nginx:alpine
@@ -203,6 +255,9 @@ services:
       - vibegrid_redis
       - vibegrid_rabbitmq
       - vibegrid_auth
+      - vibegrid_media
+      - vibegrid_email
+      - vibegrid_onboarding
       - vibegrid_realtime
     networks:
       - vibegrid_net

@@ -34,7 +34,7 @@ else
 fi
 
 # ── 2. Ensure host-owned directories exist (prevents Docker creating them as root) ──
-mkdir -p "$ROOT_DIR/services/auth/secrets" "$ROOT_DIR/logs"
+mkdir -p "$ROOT_DIR/services/auth/secrets" "$ROOT_DIR/logs" "$ROOT_DIR/uploads"
 
 # ── 3. Bring up containers ─────────────────────────────────────
 echo ""

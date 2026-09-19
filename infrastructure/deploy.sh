@@ -47,6 +47,9 @@ else
   echo "✅ Docker network 'vibegrid_net' already exists."
 fi
 
+# ── Ensure host-owned directories exist ─────────────────────────
+mkdir -p "$ROOT_DIR/services/auth/secrets" "$ROOT_DIR/logs" "$ROOT_DIR/uploads"
+
 # ── 3. Bring up containers ─────────────────────────────────────
 echo ""
 echo "[3/4] Starting Docker Compose (production)..."

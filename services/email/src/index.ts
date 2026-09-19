@@ -1,8 +1,6 @@
-import dotenv from 'dotenv';
-dotenv.config();
-
 import express from 'express';
 import Redis from 'ioredis';
+import { loadAndValidateEmailConfig } from './config/env.config';
 import { NodemailerAdapter } from './infrastructure/email-providers/NodemailerAdapter';
 import { RedisIdempotencyRepository } from './infrastructure/persistence/RedisIdempotencyRepository';
 import { ProcessEmailEventUseCase } from './application/use-cases/ProcessEmailEvent.usecase';
@@ -10,25 +8,17 @@ import { RabbitMQConsumer } from './infrastructure/messaging/RabbitMQConsumer';
 import { HealthController } from './interface/controllers/HealthController';
 
 async function bootstrap() {
-  const port = process.env.PORT || 8003;
-  const rabbitUrl = process.env.RABBITMQ_URL || 'amqp://vibegrid:VgRabbit_MQ2026%23b5%24WvL%212jRx@localhost:5672';
-  const redisUrl = process.env.REDIS_URL || 'redis://:VgRedis_R2026%23m4%24ZpQ%219wKx@localhost:6379';
+  const config = loadAndValidateEmailConfig();
 
   console.log('🚀 Starting VibeGrid Email Service...');
 
   // 1. Redis Connection
-  const redisClient = new Redis(redisUrl);
+  const redisClient = new Redis(config.redisUrl);
   redisClient.on('connect', () => console.log('✅ Connected to Redis for Email Idempotency'));
   redisClient.on('error', (err) => console.error('❌ Redis Connection Error:', err));
 
   // 2. Email Provider Adapter
-  const emailProvider = new NodemailerAdapter({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT || '587', 10),
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-    from: process.env.EMAIL_FROM || 'VibeGrid Support <no-reply@vibegrid.com>',
-  });
+  const emailProvider = new NodemailerAdapter(config.smtp);
 
   // 3. Application Use Case
   const idempotencyRepo = new RedisIdempotencyRepository(redisClient);
@@ -37,7 +27,7 @@ async function bootstrap() {
   // 4. RabbitMQ Consumer
   const rabbitConsumer = new RabbitMQConsumer(
     {
-      url: rabbitUrl,
+      url: config.rabbitUrl,
       exchange: 'domain.events',
       queue: 'q.email',
       dlxExchange: 'dlx.domain.events',
@@ -57,8 +47,8 @@ async function bootstrap() {
 
   app.get('/health', HealthController.getHealth);
 
-  const server = app.listen(port, () => {
-    console.log(`✅ Email Service running on port ${port}`);
+  const server = app.listen(config.port, () => {
+    console.log(`✅ Email Service running on port ${config.port}`);
   });
 
   // Graceful Shutdown
