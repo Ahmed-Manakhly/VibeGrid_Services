@@ -1,5 +1,5 @@
 import Redis from 'ioredis';
-import { IPresenceTracker, UserPresenceResult } from '@/application/ports/IPresenceTracker';
+import { IPresenceTracker, UserPresenceResult } from '../../application/ports/IPresenceTracker';
 
 export class RedisPresenceRepository implements IPresenceTracker {
   private client: Redis;

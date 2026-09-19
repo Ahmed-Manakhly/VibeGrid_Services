@@ -1,7 +1,7 @@
 import fs from 'fs';
 import jwt from 'jsonwebtoken';
 import cookie from 'cookie';
-import { DEFAULT_PUBLIC_KEY } from '@/config/env.config';
+import { DEFAULT_PUBLIC_KEY } from '../../config/env.config';
 
 export interface AuthenticatedUserPayload {
   userId: string;

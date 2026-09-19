@@ -1,5 +1,5 @@
 import Redis from 'ioredis';
-import { IRealtimeGateway } from '@/application/ports/IRealtimeGateway';
+import { IRealtimeGateway } from '../../application/ports/IRealtimeGateway';
 import { PinoRealtimeLogger } from '../logging/PinoRealtimeLogger';
 
 export class RedisPubSubSubscriber {

@@ -5,10 +5,10 @@ import {
   NotificationEventDTO,
   FeedSignalDTO,
   PresenceEventDTO,
-} from '@/application/ports/IRealtimeGateway';
-import { IPresenceTracker } from '@/application/ports/IPresenceTracker';
-import { SocketJwtAuthenticator } from '@/infrastructure/auth/SocketJwtAuthenticator';
-import { PinoRealtimeLogger } from '@/infrastructure/logging/PinoRealtimeLogger';
+} from '../../application/ports/IRealtimeGateway';
+import { IPresenceTracker } from '../../application/ports/IPresenceTracker';
+import { SocketJwtAuthenticator } from '../../infrastructure/auth/SocketJwtAuthenticator';
+import { PinoRealtimeLogger } from '../../infrastructure/logging/PinoRealtimeLogger';
 
 export interface RealtimeSocketHandlerConfig {
   authenticator: SocketJwtAuthenticator;
