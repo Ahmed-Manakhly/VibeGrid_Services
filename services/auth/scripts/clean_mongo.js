@@ -1,4 +1,20 @@
-require('dotenv').config();
+const path = require('path');
+const fs = require('fs');
+
+// Try loading .env from service directory first, then root directory, then cwd
+const candidateEnvPaths = [
+  path.resolve(__dirname, '../.env'),
+  path.resolve(__dirname, '../../../.env'),
+  path.resolve(process.cwd(), '.env'),
+];
+
+for (const envPath of candidateEnvPaths) {
+  if (fs.existsSync(envPath)) {
+    require('dotenv').config({ path: envPath });
+    break;
+  }
+}
+
 const { MongoClient } = require('mongodb');
 
 const includeAdmins = process.argv.includes('--include-admins');

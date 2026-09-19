@@ -7,7 +7,16 @@
     "infra:up": "docker compose -f infrastructure/docker-compose.yml up -d",
     "infra:down": "docker compose -f infrastructure/docker-compose.yml down",
     "infra:logs": "docker compose -f infrastructure/docker-compose.yml logs -f",
-    "infra:ps": "docker compose -f infrastructure/docker-compose.yml ps"
+    "infra:ps": "docker compose -f infrastructure/docker-compose.yml ps",
+    "clean:auth-mongo": "node services/auth/scripts/clean_mongo.js",
+    "clean:auth-mongo:all": "node services/auth/scripts/clean_mongo.js --include-admins",
+    "clean:media-mongo": "node services/media/scripts/clean_media_mongo.js",
+    "clean:mongo:all": "node services/auth/scripts/clean_mongo.js --include-admins && node services/media/scripts/clean_media_mongo.js",
+    "dev:auth": "npm run dev --prefix services/auth",
+    "dev:media": "npm run dev --prefix services/media",
+    "dev:email": "npm run dev --prefix services/email",
+    "dev:onboarding": "npm run dev --prefix services/onboarding",
+    "dev:realtime": "npm run dev --prefix services/realtime"
   },
   "keywords": [
     "vibegrid",
