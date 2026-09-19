@@ -1,5 +1,6 @@
 import express from 'express';
 import Redis from 'ioredis';
+import { execSync } from 'child_process';
 import { PrismaClient } from '@prisma/client';
 import { loadAndValidateOnboardingConfig } from './config/env.config';
 import { PrismaProfileRepository } from './infrastructure/persistence/PrismaProfileRepository';
@@ -12,6 +13,21 @@ async function bootstrap() {
   const config = loadAndValidateOnboardingConfig();
 
   console.log('🚀 Starting VibeGrid Onboarding Worker...');
+
+  // 0. Auto Push Prisma Schema (for Dev / Bootstrap)
+  if (config.prismaDbPush) {
+    try {
+      console.log('🔄 Syncing PostgreSQL schema with Prisma...');
+      execSync('npx prisma db push --accept-data-loss', {
+        stdio: 'inherit',
+        cwd: process.cwd(),
+        env: { ...process.env, DATABASE_URL: config.databaseUrl },
+      });
+      console.log('✅ PostgreSQL schema updated successfully!');
+    } catch (pushErr: any) {
+      console.warn('⚠️ Prisma db push warning:', pushErr?.message || pushErr);
+    }
+  }
 
   // 1. Redis & Prisma Connections
   const redisClient = new Redis(config.redisUrl);

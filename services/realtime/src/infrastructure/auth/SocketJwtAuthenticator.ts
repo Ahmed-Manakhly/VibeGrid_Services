@@ -1,7 +1,6 @@
 import fs from 'fs';
 import jwt from 'jsonwebtoken';
 import cookie from 'cookie';
-import { DEFAULT_PUBLIC_KEY } from '../../config/env.config';
 
 export interface AuthenticatedUserPayload {
   userId: string;
@@ -16,13 +15,12 @@ export class SocketJwtAuthenticator {
     if (publicKeyEnv && publicKeyEnv.trim().length > 0) {
       this.publicKey = publicKeyEnv;
     } else if (publicKeyPath) {
-      try {
-        this.publicKey = fs.readFileSync(publicKeyPath, 'utf8');
-      } catch {
-        this.publicKey = DEFAULT_PUBLIC_KEY;
+      if (!fs.existsSync(publicKeyPath)) {
+        throw new Error(`[Auth Error] RSA Public Key file missing at path: ${publicKeyPath}`);
       }
+      this.publicKey = fs.readFileSync(publicKeyPath, 'utf8');
     } else {
-      this.publicKey = DEFAULT_PUBLIC_KEY;
+      throw new Error('[Auth Error] RSA Public Key not configured via JWT_PUBLIC_KEY_PATH or JWT_PUBLIC_KEY');
     }
   }
 

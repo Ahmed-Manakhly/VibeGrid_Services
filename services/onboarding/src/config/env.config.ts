@@ -8,20 +8,34 @@ export interface OnboardingAppConfig {
   databaseUrl: string;
   rabbitUrl: string;
   redisUrl: string;
+  prismaDbPush: boolean;
 }
 
 export function loadAndValidateOnboardingConfig(): OnboardingAppConfig {
   const port = parseInt(process.env.PORT || '8004', 10);
   const nodeEnv = process.env.NODE_ENV || 'development';
-  const databaseUrl = process.env.DATABASE_URL || 'postgresql://vibegrid:VgDB_P2026%23k9%24XmL%218qWz@localhost:5432/vibegrid_db?schema=public';
-  const rabbitUrl = process.env.RABBITMQ_URL || 'amqp://vibegrid:VgRabbit_MQ2026%23b5%24WvL%212jRx@localhost:5672';
-  const redisUrl = process.env.REDIS_URL || 'redis://:VgRedis_R2026%23m4%24ZpQ%219wKx@localhost:6379';
+
+  const databaseUrl = process.env.DATABASE_URL;
+  const rabbitUrl = process.env.RABBITMQ_URL;
+  const redisUrl = process.env.REDIS_URL;
+
+  const missingVars: string[] = [];
+  if (!databaseUrl) missingVars.push('DATABASE_URL');
+  if (!rabbitUrl) missingVars.push('RABBITMQ_URL');
+  if (!redisUrl) missingVars.push('REDIS_URL');
+
+  if (missingVars.length > 0) {
+    throw new Error(`[Config Error] Missing required environment variables in Onboarding Service: ${missingVars.join(', ')}`);
+  }
+
+  const prismaDbPush = process.env.PRISMA_DB_PUSH === 'true' || nodeEnv === 'development';
 
   return {
     port,
     nodeEnv,
-    databaseUrl,
-    rabbitUrl,
-    redisUrl,
+    databaseUrl: databaseUrl!,
+    rabbitUrl: rabbitUrl!,
+    redisUrl: redisUrl!,
+    prismaDbPush,
   };
 }
