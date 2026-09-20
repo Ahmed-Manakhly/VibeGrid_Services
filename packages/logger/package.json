@@ -1,0 +1,19 @@
+{
+  "name": "@vibegrid/logger",
+  "version": "1.0.0",
+  "description": "Structured logging infrastructure package with sensitive data redaction policy for VibeGrid microservices",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "pino": "^10.3.1",
+    "pino-roll": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "typescript": "^5.6.3"
+  }
+}

@@ -9,10 +9,11 @@
     "dev": "ts-node-dev --respawn --transpile-only src/interface/main.ts",
     "gen-keys": "bash scripts/gen-keys.sh",
     "test": "jest --runInBand --forceExit",
-    "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
   },
   "dependencies": {
+    "@vibegrid/contracts": "workspace:*",
+    "@vibegrid/logger": "workspace:*",
     "amqplib": "^0.10.3",
     "argon2": "^0.31.2",
     "cookie-parser": "^1.4.6",

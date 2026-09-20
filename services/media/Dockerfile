@@ -2,19 +2,22 @@ FROM node:20-slim AS builder
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm install
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
-COPY . .
-RUN npm run build
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY packages ./packages
+COPY services/media ./services/media
 
-FROM node:20-slim
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @vibegrid/media-service build
+
+RUN pnpm --filter @vibegrid/media-service deploy --prod /app/deploy
+
+FROM node:20-slim AS runner
 
 WORKDIR /app
 
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/deploy ./
 
 EXPOSE 3002
 

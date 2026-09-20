@@ -107,8 +107,8 @@ services:
   # Auth Microservice (Express + MongoDB + RS256 JWT)
   vibegrid_auth:
     build:
-      context: ../services/auth
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: services/auth/Dockerfile
     container_name: vibegrid_auth
     restart: unless-stopped
     env_file:
@@ -118,8 +118,8 @@ services:
       NODE_ENV: production
       MONGO_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-admin_secret}@vibegrid_mongo:27017/${MONGO_AUTH_DB:-auth_db}?authSource=admin
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@vibegrid_rabbitmq:5672
-      JWT_PRIVATE_KEY_PATH: /app/secrets/jwt.private.key
-      JWT_PUBLIC_KEY_PATH: /app/secrets/jwt.public.key
+      JWT_PRIVATE_KEY_PATH: ${JWT_PRIVATE_KEY_PATH:-/app/secrets/jwt.private.key}
+      JWT_PUBLIC_KEY_PATH: ${JWT_PUBLIC_KEY_PATH:-/app/secrets/jwt.public.key}
     volumes:
       - ../services/auth/secrets:/app/secrets:ro
     depends_on:
@@ -133,8 +133,8 @@ services:
   # Media Microservice (Express + MongoDB + MinIO)
   vibegrid_media:
     build:
-      context: ../services/media
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: services/media/Dockerfile
     container_name: vibegrid_media
     restart: unless-stopped
     env_file:
@@ -149,7 +149,7 @@ services:
       MINIO_USER: ${MINIO_USER:-minioadmin}
       MINIO_PASS: ${MINIO_PASS:-minioadmin}
       MINIO_BUCKET: vibegrid-media
-      JWT_PUBLIC_KEY_PATH: /app/secrets/jwt.public.key
+      JWT_PUBLIC_KEY_PATH: ${JWT_PUBLIC_KEY_PATH:-/app/secrets/jwt.public.key}
     volumes:
       - ../services/auth/secrets:/app/secrets:ro
     depends_on:
@@ -163,8 +163,8 @@ services:
   # Email Microservice Worker (Express + RabbitMQ + Redis + Nodemailer)
   vibegrid_email:
     build:
-      context: ../services/email
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: services/email/Dockerfile
     container_name: vibegrid_email
     restart: unless-stopped
     env_file:
@@ -185,8 +185,8 @@ services:
   # Onboarding Worker Microservice (Express + Postgres + RabbitMQ + Redis)
   vibegrid_onboarding:
     build:
-      context: ../services/onboarding
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: services/onboarding/Dockerfile
     container_name: vibegrid_onboarding
     restart: unless-stopped
     env_file:
@@ -210,8 +210,8 @@ services:
   # Realtime Gateway Microservice (Socket.io + Redis Pub/Sub)
   vibegrid_realtime:
     build:
-      context: ../services/realtime
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: services/realtime/Dockerfile
     container_name: vibegrid_realtime
     restart: unless-stopped
     env_file:
@@ -220,7 +220,7 @@ services:
       PORT: 8005
       NODE_ENV: production
       REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret}@vibegrid_redis:6379
-      JWT_PUBLIC_KEY_PATH: /app/secrets/jwt.public.key
+      JWT_PUBLIC_KEY_PATH: ${JWT_PUBLIC_KEY_PATH:-/app/secrets/jwt.public.key}
     volumes:
       - ../services/auth/secrets:/app/secrets:ro
     depends_on:

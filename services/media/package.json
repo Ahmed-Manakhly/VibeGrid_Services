@@ -1,5 +1,5 @@
 {
-  "name": "vibegrid-media-service",
+  "name": "@vibegrid/media-service",
   "version": "1.0.0",
   "description": "VibeGrid Express Media Microservice (Clean Architecture / DDD)",
   "main": "dist/index.js",
@@ -10,6 +10,8 @@
     "test": "jest"
   },
   "dependencies": {
+    "@vibegrid/contracts": "workspace:*",
+    "@vibegrid/logger": "workspace:*",
     "@aws-sdk/client-s3": "^3.726.0",
     "@aws-sdk/s3-request-presigner": "^3.726.0",
     "@types/jsonwebtoken": "^9.0.10",

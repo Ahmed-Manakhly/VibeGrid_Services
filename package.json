@@ -3,7 +3,15 @@
   "version": "1.0.0",
   "description": "Backend microservices and worker pool for VibeGrid distributed system architecture",
   "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "workspaces": [
+    "packages/*",
+    "services/*"
+  ],
   "scripts": {
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
     "infra:up": "docker compose -f infrastructure/docker-compose.yml up -d",
     "infra:down": "docker compose -f infrastructure/docker-compose.yml down",
     "infra:logs": "docker compose -f infrastructure/docker-compose.yml logs -f",
@@ -12,11 +20,11 @@
     "clean:auth-mongo:all": "node services/auth/scripts/clean_mongo.js --include-admins",
     "clean:media-mongo": "node services/media/scripts/clean_media_mongo.js",
     "clean:mongo:all": "node services/auth/scripts/clean_mongo.js --include-admins && node services/media/scripts/clean_media_mongo.js",
-    "dev:auth": "npm run dev --prefix services/auth",
-    "dev:media": "npm run dev --prefix services/media",
-    "dev:email": "npm run dev --prefix services/email",
-    "dev:onboarding": "npm run dev --prefix services/onboarding",
-    "dev:realtime": "npm run dev --prefix services/realtime"
+    "dev:auth": "pnpm --filter @vibegrid/auth-service dev",
+    "dev:media": "pnpm --filter @vibegrid/media-service dev",
+    "dev:email": "pnpm --filter @vibegrid/email-worker dev",
+    "dev:onboarding": "pnpm --filter @vibegrid/onboarding-worker dev",
+    "dev:realtime": "pnpm --filter @vibegrid/realtime-service dev"
   },
   "keywords": [
     "vibegrid",

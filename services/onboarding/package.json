@@ -10,6 +10,8 @@
     "test": "jest"
   },
   "dependencies": {
+    "@vibegrid/contracts": "workspace:*",
+    "@vibegrid/logger": "workspace:*",
     "@prisma/client": "^5.22.0",
     "amqplib": "^0.10.4",
     "dotenv": "^16.4.5",

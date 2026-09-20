@@ -1,11 +1,9 @@
 import amqp, { Channel, ConsumeMessage } from 'amqplib';
+import { createLogger } from '@vibegrid/logger';
+import { validateEvent } from '@vibegrid/contracts';
 import { ProcessEmailEventUseCase } from '../../application/use-cases/ProcessEmailEvent.usecase';
 
-const logger = {
-  info: (msg: string, meta?: any) => console.log(`[INFO] ${msg}`, meta ? JSON.stringify(meta) : ''),
-  error: (msg: string, meta?: any) => console.error(`[ERROR] ${msg}`, meta ? JSON.stringify(meta) : ''),
-  warn: (msg: string, meta?: any) => console.warn(`[WARN] ${msg}`, meta ? JSON.stringify(meta) : ''),
-};
+const logger = createLogger('vibegrid-email');
 export interface RabbitMQConsumerConfig {
   url: string;
   exchange: string;
@@ -80,16 +78,17 @@ export class RabbitMQConsumer {
 
       try {
         const content = msg.content.toString();
-        const envelope = JSON.parse(content);
-        const correlationId = envelope.correlationId || envelope.payload?.correlationId || envelope.eventId;
+        const rawEnvelope = JSON.parse(content);
+        const validatedEvent = validateEvent(rawEnvelope);
+        const correlationId = validatedEvent.correlationId || validatedEvent.eventId;
 
-        logger.info(`Processing email event [${envelope.eventName || 'unknown'}]`, {
-          eventId: envelope.eventId,
-          eventName: envelope.eventName,
+        logger.info(`Processing email event [${validatedEvent.eventName}]`, {
+          eventId: validatedEvent.eventId,
+          eventName: validatedEvent.eventName,
           correlationId,
         });
 
-        const result = await this.processEmailUseCase.execute(envelope);
+        const result = await this.processEmailUseCase.execute(validatedEvent as any);
 
         if (result.success) {
           this.channel?.ack(msg);

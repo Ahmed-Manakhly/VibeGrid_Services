@@ -121,8 +121,8 @@ services:
   # Dev Auth Microservice Container
   vibegrid_auth_dev:
     build:
-      context: ../services/auth
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: services/auth/Dockerfile
     container_name: vibegrid_auth_dev
     restart: unless-stopped
     env_file:
@@ -132,8 +132,8 @@ services:
       NODE_ENV: docker_development
       MONGO_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-admin_secret}@vibegrid_mongo:27017/${MONGO_AUTH_DB:-auth_db}?authSource=admin
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@vibegrid_rabbitmq:5672
-      JWT_PRIVATE_KEY_PATH: /app/secrets/jwt.private.key
-      JWT_PUBLIC_KEY_PATH: /app/secrets/jwt.public.key
+      JWT_PRIVATE_KEY_PATH: ${JWT_PRIVATE_KEY_PATH:-/app/secrets/jwt.private.key}
+      JWT_PUBLIC_KEY_PATH: ${JWT_PUBLIC_KEY_PATH:-/app/secrets/jwt.public.key}
       COOKIE_DOMAIN: localhost
     volumes:
       - ../services/auth/secrets:/app/secrets:ro
@@ -152,8 +152,8 @@ services:
   # Dev Media Microservice Container
   vibegrid_media_dev:
     build:
-      context: ../services/media
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: services/media/Dockerfile
     container_name: vibegrid_media_dev
     restart: unless-stopped
     env_file:
@@ -168,7 +168,7 @@ services:
       MINIO_USER: ${MINIO_USER:-minioadmin}
       MINIO_PASS: ${MINIO_PASS:-minioadmin}
       MINIO_BUCKET: vibegrid-media
-      JWT_PUBLIC_KEY_PATH: /app/secrets/jwt.public.key
+      JWT_PUBLIC_KEY_PATH: ${JWT_PUBLIC_KEY_PATH:-/app/secrets/jwt.public.key}
     volumes:
       - ../services/auth/secrets:/app/secrets:ro
     ports:
@@ -186,8 +186,8 @@ services:
   # Dev Email Microservice Container
   vibegrid_email_dev:
     build:
-      context: ../services/email
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: services/email/Dockerfile
     container_name: vibegrid_email_dev
     restart: unless-stopped
     env_file:
@@ -212,8 +212,8 @@ services:
   # Dev Onboarding Worker Container
   vibegrid_onboarding_dev:
     build:
-      context: ../services/onboarding
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: services/onboarding/Dockerfile
     container_name: vibegrid_onboarding_dev
     restart: unless-stopped
     env_file:
@@ -241,8 +241,8 @@ services:
   # Dev Realtime Gateway Container
   vibegrid_realtime_dev:
     build:
-      context: ../services/realtime
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: services/realtime/Dockerfile
     container_name: vibegrid_realtime_dev
     restart: unless-stopped
     env_file:
@@ -251,7 +251,7 @@ services:
       PORT: 8005
       NODE_ENV: docker_development
       REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret}@vibegrid_redis:6379
-      JWT_PUBLIC_KEY_PATH: /app/secrets/jwt.public.key
+      JWT_PUBLIC_KEY_PATH: ${JWT_PUBLIC_KEY_PATH:-/app/secrets/jwt.public.key}
     volumes:
       - ../services/auth/secrets:/app/secrets:ro
     ports:
