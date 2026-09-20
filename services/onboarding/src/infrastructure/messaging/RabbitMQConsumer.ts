@@ -1,8 +1,8 @@
 import amqp, { Channel, ConsumeMessage } from 'amqplib';
-import { createLogger } from '../../../../../shared/logger';
+import pino from 'pino';
 import { ProcessOnboardingEventUseCase } from '../../application/use-cases/ProcessOnboardingEvent.usecase';
 
-const logger = createLogger('vibegrid-onboarding');
+const logger = pino({ name: 'vibegrid-onboarding' });
 
 export interface RabbitMQConsumerConfig {
   url: string;
@@ -68,7 +68,7 @@ export class RabbitMQConsumer {
     // Bind canonical user.registered routing key to q.user.onboarding
     await this.channel.bindQueue(queue, exchange, 'user.registered');
 
-    logger.info(`Bound queue [${queue}] to exchange [${exchange}]`, { queue, exchange });
+    logger.info({ queue, exchange }, `Bound queue [${queue}] to exchange [${exchange}]`);
 
     // 4. Start Consumer Loop
     await this.channel.consume(queue, async (msg: ConsumeMessage | null) => {
@@ -79,11 +79,14 @@ export class RabbitMQConsumer {
         const envelope = JSON.parse(content);
         const correlationId = envelope.correlationId || envelope.payload?.correlationId || envelope.eventId;
 
-        logger.info(`Processing onboarding event [${envelope.eventName || 'unknown'}]`, {
-          eventId: envelope.eventId,
-          eventName: envelope.eventName,
-          correlationId,
-        });
+        logger.info(
+          {
+            eventId: envelope.eventId,
+            eventName: envelope.eventName,
+            correlationId,
+          },
+          `Processing onboarding event [${envelope.eventName || 'unknown'}]`
+        );
 
         const result = await this.processOnboardingUseCase.execute(envelope);
 
@@ -92,10 +95,10 @@ export class RabbitMQConsumer {
         }
       } catch (err: any) {
         const deathCount = this.getDeathCount(msg);
-        logger.error(`Processing error (attempt ${deathCount + 1})`, { attempt: deathCount + 1, error: err });
+        logger.error({ attempt: deathCount + 1, error: err }, `Processing error (attempt ${deathCount + 1})`);
 
         if (deathCount >= 3) {
-          logger.warn(`Exceeded max retries (3). Routing event to DLQ: ${dlxQueue}`, { dlxQueue });
+          logger.warn({ dlxQueue }, `Exceeded max retries (3). Routing event to DLQ: ${dlxQueue}`);
           this.channel?.publish(dlxExchange, 'dlq.onboarding', msg.content, { persistent: true });
           this.channel?.ack(msg);
         } else {
