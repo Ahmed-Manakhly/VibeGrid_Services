@@ -9,9 +9,9 @@
     "services/*"
   ],
   "scripts": {
-    "build": "pnpm -r build",
-    "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r test",
+    "build": "npx pnpm -r build",
+    "typecheck": "npx pnpm -r typecheck",
+    "test": "npx pnpm -r test",
     "infra:up": "docker compose -f infrastructure/docker-compose.yml up -d",
     "infra:down": "docker compose -f infrastructure/docker-compose.yml down",
     "infra:logs": "docker compose -f infrastructure/docker-compose.yml logs -f",
@@ -20,11 +20,11 @@
     "clean:auth-mongo:all": "node services/auth/scripts/clean_mongo.js --include-admins",
     "clean:media-mongo": "node services/media/scripts/clean_media_mongo.js",
     "clean:mongo:all": "node services/auth/scripts/clean_mongo.js --include-admins && node services/media/scripts/clean_media_mongo.js",
-    "dev:auth": "pnpm --filter @vibegrid/auth-service dev",
-    "dev:media": "pnpm --filter @vibegrid/media-service dev",
-    "dev:email": "pnpm --filter @vibegrid/email-worker dev",
-    "dev:onboarding": "pnpm --filter @vibegrid/onboarding-worker dev",
-    "dev:realtime": "pnpm --filter @vibegrid/realtime-service dev"
+    "dev:auth": "npx pnpm --filter @vibegrid/auth-service dev",
+    "dev:media": "npx pnpm --filter @vibegrid/media-service dev",
+    "dev:email": "npx pnpm --filter @vibegrid/email-worker dev",
+    "dev:onboarding": "npx pnpm --filter @vibegrid/onboarding-worker dev",
+    "dev:realtime": "npx pnpm --filter @vibegrid/realtime-service dev"
   },
   "keywords": [
     "vibegrid",
