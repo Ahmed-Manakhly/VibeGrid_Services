@@ -27,7 +27,7 @@ describe('Media HTTP Endpoints & Auth Middleware', () => {
     const token = jwt.sign(
       { sub: 'usr_123', email: 'test@example.com', role: 'USER' },
       privateKey,
-      { algorithm: 'RS256', expiresIn: '15m' }
+      { algorithm: 'RS256', expiresIn: '15m', issuer: 'vibegrid-auth-service', audience: 'vibegrid-api' }
     );
 
     const res = await request(app)

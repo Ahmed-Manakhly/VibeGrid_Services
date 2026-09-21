@@ -25,8 +25,19 @@ export function createMediaAuthMiddleware(publicKeyPath?: string) {
 
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     try {
-      let token: string | undefined;
+      // 1. Production Gateway Context: Trust Gateway-injected identity headers
+      const gatewayUserId = req.headers['x-user-id'] as string;
+      if (gatewayUserId && gatewayUserId.trim().length > 0) {
+        req.user = {
+          userId: gatewayUserId,
+          email: (req.headers['x-user-email'] as string) || '',
+          role: (req.headers['x-user-role'] as string) || 'USER',
+        };
+        return next();
+      }
 
+      // 2. Local Dev Direct-to-Port Fallback: Verify JWT via Public Key if call bypassed Nginx Gateway locally
+      let token: string | undefined;
       const authHeader = req.headers.authorization;
       if (authHeader && authHeader.startsWith('Bearer ')) {
         token = authHeader.substring(7);
@@ -39,7 +50,11 @@ export function createMediaAuthMiddleware(publicKeyPath?: string) {
         return;
       }
 
-      const decoded = jwt.verify(token, publicKey, { algorithms: ['RS256'] }) as any;
+      const decoded = jwt.verify(token, publicKey, {
+        algorithms: ['RS256'],
+        issuer: 'vibegrid-auth-service',
+        audience: 'vibegrid-api',
+      }) as any;
       
       const userId = decoded.sub || decoded.userId;
       if (!userId) {

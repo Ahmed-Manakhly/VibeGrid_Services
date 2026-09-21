@@ -63,7 +63,7 @@ describe('Realtime Gateway — Cross-Instance Redis Pub/Sub Event Broadcast Test
     const token = jwt.sign(
       { sub: 'target_user_789', email: 'target@vibegrid.com', role: 'USER' },
       TEST_PRIVATE_KEY,
-      { algorithm: 'RS256', expiresIn: '1h' }
+      { algorithm: 'RS256', expiresIn: '1h', issuer: 'vibegrid-auth-service', audience: 'vibegrid-api' }
     );
 
     // Connect client to Node B
@@ -99,7 +99,7 @@ describe('Realtime Gateway — Cross-Instance Redis Pub/Sub Event Broadcast Test
     const token = jwt.sign(
       { sub: 'target_user_789', email: 'target@vibegrid.com', role: 'USER' },
       TEST_PRIVATE_KEY,
-      { algorithm: 'RS256', expiresIn: '1h' }
+      { algorithm: 'RS256', expiresIn: '1h', issuer: 'vibegrid-auth-service', audience: 'vibegrid-api' }
     );
 
     clientSocketOnNodeB = Client(`http://localhost:${portB}`, {

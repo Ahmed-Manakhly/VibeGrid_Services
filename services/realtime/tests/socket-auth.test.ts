@@ -55,7 +55,7 @@ describe('Realtime Gateway — Socket Authentication & Authorization Tests', () 
     const token = jwt.sign(
       { sub: 'user_test_123', email: 'test@vibegrid.com', role: 'USER' },
       TEST_PRIVATE_KEY,
-      { algorithm: 'RS256', expiresIn: '1h' }
+      { algorithm: 'RS256', expiresIn: '1h', issuer: 'vibegrid-auth-service', audience: 'vibegrid-api' }
     );
 
     clientSocket = Client(`http://localhost:${port}`, {
@@ -74,7 +74,7 @@ describe('Realtime Gateway — Socket Authentication & Authorization Tests', () 
     const token = jwt.sign(
       { sub: 'user_query_456', email: 'query@vibegrid.com', role: 'USER' },
       TEST_PRIVATE_KEY,
-      { algorithm: 'RS256', expiresIn: '1h' }
+      { algorithm: 'RS256', expiresIn: '1h', issuer: 'vibegrid-auth-service', audience: 'vibegrid-api' }
     );
 
     clientSocket = Client(`http://localhost:${port}`, {

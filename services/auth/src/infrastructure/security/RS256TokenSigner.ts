@@ -31,14 +31,16 @@ export class RS256TokenSigner implements ITokenSigner {
     return jwt.sign(payload, this.privateKey, {
       algorithm: 'RS256',
       expiresIn: this.accessTokenExpiresInSec,
-      issuer: 'vibegrid-auth-service'
+      issuer: 'vibegrid-auth-service',
+      audience: 'vibegrid-api'
     });
   }
 
   public verifyAccessToken(token: string): any {
     return jwt.verify(token, this.publicKey, {
       algorithms: ['RS256'],
-      issuer: 'vibegrid-auth-service'
+      issuer: 'vibegrid-auth-service',
+      audience: 'vibegrid-api'
     });
   }
 }

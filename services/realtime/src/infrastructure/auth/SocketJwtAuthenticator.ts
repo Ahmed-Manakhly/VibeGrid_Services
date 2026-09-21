@@ -25,7 +25,11 @@ export class SocketJwtAuthenticator {
   }
 
   public verifyToken(rawToken: string): AuthenticatedUserPayload {
-    const decoded = jwt.verify(rawToken, this.publicKey, { algorithms: ['RS256'] }) as any;
+    const decoded = jwt.verify(rawToken, this.publicKey, {
+      algorithms: ['RS256'],
+      issuer: 'vibegrid-auth-service',
+      audience: 'vibegrid-api',
+    }) as any;
 
     const userId = decoded.sub || decoded.userId;
     if (!userId) {
