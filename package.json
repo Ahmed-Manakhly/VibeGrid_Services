@@ -24,7 +24,8 @@
     "dev:media": "npx pnpm --filter @vibegrid/media-service dev",
     "dev:email": "npx pnpm --filter @vibegrid/email-worker dev",
     "dev:onboarding": "npx pnpm --filter @vibegrid/onboarding-worker dev",
-    "dev:realtime": "npx pnpm --filter @vibegrid/realtime-service dev"
+    "dev:realtime": "npx pnpm --filter @vibegrid/realtime-service dev",
+    "dev:all": "npx pnpm --parallel --filter \"./services/*\" dev"
   },
   "keywords": [
     "vibegrid",
