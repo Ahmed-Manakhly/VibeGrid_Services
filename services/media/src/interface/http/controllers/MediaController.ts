@@ -1,4 +1,5 @@
 import { Response, NextFunction } from 'express';
+import { createLogger } from '@vibegrid/logger';
 import { AuthenticatedRequest } from '../middleware/mediaAuthMiddleware';
 import { CreateUploadIntentUseCase } from '../../../application/use-cases/CreateUploadIntentUseCase';
 import { ConfirmUploadUseCase } from '../../../application/use-cases/ConfirmUploadUseCase';
@@ -6,6 +7,8 @@ import { GetMediaAssetUseCase } from '../../../application/use-cases/GetMediaAss
 import { MediaApplicationError } from '../../../application/errors/MediaApplicationError';
 import { DomainError } from '../../../domain/errors/DomainError';
 import { MediaPurpose } from '../../../domain/value-objects/MediaFileConfig';
+
+const logger = createLogger('vibegrid-media');
 
 export class MediaController {
   constructor(
@@ -30,6 +33,14 @@ export class MediaController {
         mimeType,
         fileSizeBytes: isNaN(parsedSize) ? 0 : parsedSize,
         purpose: purpose as MediaPurpose,
+      });
+
+      logger.info('Media upload intent created', {
+        requestId: (req as any).requestId,
+        userId: req.user.userId,
+        assetId: result.assetId,
+        mimeType,
+        purpose,
       });
 
       res.status(201).json({

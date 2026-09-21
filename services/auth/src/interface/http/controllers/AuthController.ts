@@ -1,7 +1,10 @@
 import { Request, Response } from 'express';
+import { createLogger } from '@vibegrid/logger';
 import { RegisterUserUseCase } from '../../../application/use-cases/RegisterUser.usecase';
 import { AuthenticateUseCase } from '../../../application/use-cases/Authenticate.usecase';
 import { RefreshTokenUseCase } from '../../../application/use-cases/RefreshToken.usecase';
+
+const logger = createLogger('vibegrid-auth');
 import { RevokeTokenUseCase } from '../../../application/use-cases/RevokeToken.usecase';
 import { RequestPasswordResetUseCase } from '../../../application/use-cases/RequestPasswordReset.usecase';
 import { ResetPasswordUseCase } from '../../../application/use-cases/ResetPassword.usecase';
@@ -72,6 +75,13 @@ export class AuthController {
 
     const result = await this.registerUserUseCase.execute({ email, password, passwordConfirm, name, role });
 
+    logger.info('User registration completed', {
+      requestId: (req as any).requestId,
+      userId: result.user.id,
+      role: result.user.role,
+      isVerificationRequired: result.isVerificationRequired,
+    });
+
     sendSuccess(
       res,
       201,
@@ -98,6 +108,12 @@ export class AuthController {
     const result = await this.authenticateUseCase.execute({ email, password });
     this.setCookies(res, result.accessToken, result.refreshToken);
 
+    logger.info('User authentication succeeded', {
+      requestId: (req as any).requestId,
+      userId: result.user.id,
+      role: result.user.role,
+    });
+
     sendSuccess(res, 200, {
       message: 'Authenticated successfully',
       user: {
@@ -118,6 +134,10 @@ export class AuthController {
     try {
       const result = await this.refreshTokenUseCase.execute(refreshToken);
       this.setCookies(res, result.accessToken, result.refreshToken);
+
+      logger.info('Token rotation succeeded', {
+        requestId: (req as any).requestId,
+      });
 
       sendSuccess(res, 200, { message: 'Token rotated successfully' });
     } catch (err) {

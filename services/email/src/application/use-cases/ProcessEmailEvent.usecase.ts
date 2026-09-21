@@ -1,8 +1,11 @@
+import { createLogger } from '@vibegrid/logger';
 import { IEmailProvider } from '../../domain/ports/IEmailProvider';
 import { IIdempotencyRepository } from '../../domain/ports/IIdempotencyRepository';
 import { EmailMessage } from '../../domain/value-objects/EmailMessage.vo';
 import { EventEnvelopeDTO, ProcessEmailResultDTO } from '../dtos/email-event.dtos';
 import crypto from 'crypto';
+
+const logger = createLogger('vibegrid-email');
 
 export class ProcessEmailEventUseCase {
   constructor(
@@ -21,7 +24,7 @@ export class ProcessEmailEventUseCase {
     // 1. Two-phase claim check
     const claimed = await this.idempotencyRepo.acquireClaim(eventId, claimId, 300);
     if (!claimed) {
-      console.log(`[ProcessEmailEventUseCase] Duplicate or in-flight event skipped: ${eventId} (${eventName})`);
+      logger.info('Duplicate or in-flight email event skipped', { eventId, eventName });
       return { success: true, skippedDuplicate: true };
     }
 
@@ -30,17 +33,25 @@ export class ProcessEmailEventUseCase {
       const emailMessage = this.buildEmailMessage(eventName, payload);
 
       // 3. Send email via provider port
+      const startTime = Date.now();
       await this.emailProvider.send(emailMessage);
+      const durationMs = Date.now() - startTime;
 
       // 4. Mark event completed
       await this.idempotencyRepo.markCompleted(eventId, claimId, 86400);
 
-      console.log(`[ProcessEmailEventUseCase] Email successfully delivered for event ${eventId} (${eventName})`);
+      logger.info('Email notification dispatched successfully', {
+        eventId,
+        eventName,
+        template: eventName,
+        durationMs,
+      });
+
       return { success: true };
     } catch (err: any) {
       // Release claim safely on failure so retry engine can re-process if needed
       await this.idempotencyRepo.releaseClaim(eventId, claimId).catch(() => {});
-      console.error(`[ProcessEmailEventUseCase] Failed to process ${eventName} (${eventId}):`, err?.message || err);
+      logger.error('Failed to process email event', err, { eventId, eventName });
       throw err;
     }
   }
