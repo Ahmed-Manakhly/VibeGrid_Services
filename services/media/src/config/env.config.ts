@@ -38,10 +38,25 @@ export function loadAndValidateMediaConfig(): MediaAppConfig {
   const defaultPublicKeyPath = path.resolve(__dirname, '../../secrets/jwt.public.key');
   const jwtPublicKeyPath = process.env.JWT_PUBLIC_KEY_PATH || defaultPublicKeyPath;
 
+  let formattedMongoUri = mongoUri || 'mongodb://localhost:27017/media_db';
+  try {
+    if (formattedMongoUri.includes('@') && formattedMongoUri.startsWith('mongodb://')) {
+      const parts = formattedMongoUri.replace('mongodb://', '').split('@');
+      const creds = parts[0].split(':');
+      if (creds.length === 2) {
+        const user = encodeURIComponent(decodeURIComponent(creds[0]));
+        const pass = encodeURIComponent(decodeURIComponent(creds[1]));
+        formattedMongoUri = `mongodb://${user}:${pass}@${parts[1]}`;
+      }
+    }
+  } catch (e) {
+    // Fallback
+  }
+
   return {
     port,
     nodeEnv,
-    mongoUri: mongoUri!,
+    mongoUri: formattedMongoUri,
     minio: {
       internalEndpoint: process.env.MINIO_INTERNAL_ENDPOINT || 'http://localhost:9000',
       publicEndpoint: process.env.MINIO_PUBLIC_ENDPOINT || 'http://localhost:9000',
