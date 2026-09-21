@@ -1,9 +1,11 @@
 import pino, { Logger as PinoInstance, LoggerOptions } from "pino";
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 
 export interface LogContext {
   correlationId?: string;
+  requestId?: string;
   userId?: string;
   service?: string;
   error?: Error | unknown;
@@ -22,16 +24,24 @@ export const REDACT_PATHS = [
   "authorization",
   "headers.authorization",
   "req.headers.authorization",
+  "cookie",
+  "headers.cookie",
+  "req.headers.cookie",
+  "set-cookie",
+  "headers.set-cookie",
+  "res.headers.set-cookie",
+  "access_token",
+  "refresh_token",
   "token",
   "accessToken",
   "refreshToken",
   "password",
   "newPassword",
   "oldPassword",
-  "emailToken",
   "secret",
   "clientSecret",
   "otp",
+  "emailToken",
 ];
 
 export class PinoServiceLogger implements ILogger {
@@ -135,4 +145,50 @@ export class PinoServiceLogger implements ILogger {
 
 export function createLogger(serviceName: string): ILogger {
   return new PinoServiceLogger(serviceName);
+}
+
+/**
+ * Express HTTP Request Logger Middleware for VibeGrid microservices.
+ * Captures request correlation ID (X-Request-ID), timing, status code, route, and method.
+ * Enforces zero payload/cookie/credential leakage in HTTP logs.
+ */
+export function createExpressHttpLogger(logger: ILogger, serviceName: string) {
+  return (req: any, res: any, next: () => void) => {
+    const startTime = Date.now();
+
+    // 1. Normalize/Sanitize incoming X-Request-ID or generate UUID
+    let requestId = req.headers["x-request-id"] as string;
+    if (!requestId || typeof requestId !== "string" || requestId.trim().length === 0) {
+      requestId = crypto.randomUUID();
+    } else {
+      // Basic sanitization to prevent log injection attack characters
+      requestId = requestId.trim().replace(/[^a-zA-Z0-9\-_.]/g, "");
+    }
+
+    // Attach to request context & response header
+    req.requestId = requestId;
+    res.setHeader("X-Request-ID", requestId);
+
+    res.on("finish", () => {
+      const durationMs = Date.now() - startTime;
+      const logContext: LogContext = {
+        service: serviceName,
+        requestId,
+        method: req.method,
+        route: req.originalUrl || req.url,
+        statusCode: res.statusCode,
+        durationMs,
+      };
+
+      if (res.statusCode >= 500) {
+        logger.error(`HTTP ${req.method} ${req.originalUrl || req.url} ${res.statusCode}`, logContext);
+      } else if (res.statusCode >= 400) {
+        logger.warn(`HTTP ${req.method} ${req.originalUrl || req.url} ${res.statusCode}`, logContext);
+      } else {
+        logger.info(`HTTP ${req.method} ${req.originalUrl || req.url} ${res.statusCode}`, logContext);
+      }
+    });
+
+    next();
+  };
 }

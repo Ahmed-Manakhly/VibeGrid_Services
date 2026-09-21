@@ -2,17 +2,21 @@ import express, { Express, Request, Response, NextFunction } from 'express';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import mongoose from 'mongoose';
+import { createLogger, createExpressHttpLogger } from '@vibegrid/logger';
 import { ServiceContainer } from './container';
 import { createAuthRouter } from '../interface/http/routes/auth.routes';
 import { createAdminRouter } from '../interface/http/routes/admin.routes';
 import { globalErrorHandler } from '../interface/http/middleware/globalErrorHandler';
 import { NotFoundError } from '../application/errors/errors';
 
+const authLogger = createLogger('vibegrid-auth');
+
 export function createApp(container: ServiceContainer): Express {
   const app = express();
 
   app.set('trust proxy', 1); // Trust Nginx / API Gateway proxy headers
 
+  app.use(createExpressHttpLogger(authLogger, 'vibegrid-auth'));
   app.use(express.json());
   app.use(cookieParser());
   app.use(cors({ origin: true, credentials: true }));

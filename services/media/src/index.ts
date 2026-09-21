@@ -2,10 +2,10 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import mongoose from 'mongoose';
+import { createLogger, createExpressHttpLogger } from '@vibegrid/logger';
 
 import { MinioS3StorageProvider } from './infrastructure/storage/MinioS3StorageProvider';
 import { MongoMediaAssetRepository } from './infrastructure/persistence/MongoMediaAssetRepository';
-import { WinstonLogger } from './infrastructure/logging/WinstonLogger';
 
 import { CreateUploadIntentUseCase } from './application/use-cases/CreateUploadIntentUseCase';
 import { ConfirmUploadUseCase } from './application/use-cases/ConfirmUploadUseCase';
@@ -18,8 +18,9 @@ import { loadAndValidateMediaConfig } from './config/env.config';
 
 const config = loadAndValidateMediaConfig();
 const app = express();
-const logger = new WinstonLogger();
+const logger = createLogger('vibegrid-media');
 
+app.use(createExpressHttpLogger(logger, 'vibegrid-media'));
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());

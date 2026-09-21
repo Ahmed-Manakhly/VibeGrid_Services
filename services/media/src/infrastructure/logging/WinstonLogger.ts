@@ -1,5 +1,4 @@
-import winston from 'winston';
-import path from 'path';
+import { createLogger, ILogger as SharedLogger } from '@vibegrid/logger';
 
 export interface ILogger {
   info(message: string, meta?: any): void;
@@ -9,33 +8,10 @@ export interface ILogger {
 }
 
 export class WinstonLogger implements ILogger {
-  private logger: winston.Logger;
+  private logger: SharedLogger;
 
-  constructor() {
-    const logDir = path.resolve(process.cwd(), 'logs');
-
-    this.logger = winston.createLogger({
-      level: process.env.LOG_LEVEL || 'info',
-      format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json()
-      ),
-      transports: [
-        new winston.transports.Console({
-          format: winston.format.combine(
-            winston.format.colorize(),
-            winston.format.simple()
-          ),
-        }),
-        new winston.transports.File({
-          filename: path.join(logDir, 'error.log'),
-          level: 'error',
-        }),
-        new winston.transports.File({
-          filename: path.join(logDir, 'combined.log'),
-        }),
-      ],
-    });
+  constructor(serviceName: string = 'vibegrid-media') {
+    this.logger = createLogger(serviceName);
   }
 
   info(message: string, meta?: any): void {
