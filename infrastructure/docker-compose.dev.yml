@@ -137,6 +137,7 @@ services:
       COOKIE_DOMAIN: localhost
     volumes:
       - ../services/auth/secrets:/app/secrets:ro
+      - ../logs/auth:/app/logs
     ports:
       - "8001:8001"
     depends_on:
@@ -171,6 +172,7 @@ services:
       JWT_PUBLIC_KEY_PATH: ${JWT_PUBLIC_KEY_PATH:-/app/secrets/jwt.public.key}
     volumes:
       - ../services/auth/secrets:/app/secrets:ro
+      - ../logs/media:/app/logs
     ports:
       - "8002:8002"
     depends_on:
@@ -197,6 +199,8 @@ services:
       NODE_ENV: docker_development
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@vibegrid_rabbitmq:5672
       REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret}@vibegrid_redis:6379
+    volumes:
+      - ../logs/email:/app/logs
     ports:
       - "8003:8003"
     depends_on:
@@ -224,6 +228,8 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-vibegrid}:${POSTGRES_PASSWORD:-vibegrid_secret}@vibegrid_postgres:5432/${POSTGRES_DB:-vibegrid_db}?schema=public
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@vibegrid_rabbitmq:5672
       REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret}@vibegrid_redis:6379
+    volumes:
+      - ../logs/onboarding:/app/logs
     ports:
       - "8004:8004"
     depends_on:
@@ -254,6 +260,7 @@ services:
       JWT_PUBLIC_KEY_PATH: ${JWT_PUBLIC_KEY_PATH:-/app/secrets/jwt.public.key}
     volumes:
       - ../services/auth/secrets:/app/secrets:ro
+      - ../logs/realtime:/app/logs
     ports:
       - "8005:8005"
     depends_on:

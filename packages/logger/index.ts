@@ -42,6 +42,8 @@ export const REDACT_PATHS = [
   "clientSecret",
   "otp",
   "emailToken",
+  "email",
+  "to",
 ];
 
 export class PinoServiceLogger implements ILogger {
@@ -69,36 +71,60 @@ export class PinoServiceLogger implements ILogger {
       timestamp: pino.stdTimeFunctions.isoTime,
     };
 
-    if (isProduction) {
-      const logDir = process.env.LOG_DIR || path.join(process.cwd(), "logs");
-      if (!fs.existsSync(logDir)) {
-        fs.mkdirSync(logDir, { recursive: true });
-      }
-
-      const transport = pino.transport({
-        targets: [
-          {
-            target: "pino/file",
-            options: { destination: 1 },
-            level: logLevel,
-          },
-          {
-            target: "pino-roll",
-            options: {
-              file: path.join(logDir, `${this.serviceName}`),
-              frequency: "daily",
-              mkdir: true,
-              size: "20m",
-            },
-            level: logLevel,
-          },
-        ],
-      });
-
-      this.logger = pino(pinoOptions, transport);
-    } else {
-      this.logger = pino(pinoOptions);
+    // Derive service subfolder name (e.g. 'vibegrid-auth' -> 'auth')
+    const serviceFolder = this.serviceName.replace(/^vibegrid-/, "").replace(/-service$/, "");
+    let baseLogDir = process.env.LOG_DIR;
+    if (!baseLogDir) {
+      baseLogDir = path.join(process.cwd(), "logs");
     }
+    
+    // If LOG_DIR already targets a service subfolder (e.g., /app/logs), use it directly
+    const serviceLogDir = baseLogDir.endsWith(serviceFolder) ? baseLogDir : path.join(baseLogDir, serviceFolder);
+
+    if (!fs.existsSync(serviceLogDir)) {
+      fs.mkdirSync(serviceLogDir, { recursive: true });
+    }
+
+    const targets: any[] = [
+      {
+        target: "pino/file",
+        options: { destination: 1 }, // Stdout stream
+        level: logLevel,
+      },
+    ];
+
+    // Enable file rolling transport in dev / staging or when explicitly configured
+    if (process.env.ENABLE_FILE_LOGGING !== "false") {
+      targets.push(
+        {
+          target: "pino-roll",
+          options: {
+            file: path.join(serviceLogDir, "app"),
+            frequency: "daily",
+            extension: ".log",
+            mkdir: true,
+            size: "20m",
+            maxFiles: 14,
+          },
+          level: logLevel,
+        },
+        {
+          target: "pino-roll",
+          options: {
+            file: path.join(serviceLogDir, "error"),
+            frequency: "daily",
+            extension: ".log",
+            mkdir: true,
+            size: "20m",
+            maxFiles: 30,
+          },
+          level: "warn",
+        }
+      );
+    }
+
+    const transport = pino.transport({ targets });
+    this.logger = pino(pinoOptions, transport);
   }
 
   info(message: string, context?: LogContext): void {
