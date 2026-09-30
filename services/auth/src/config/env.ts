@@ -14,8 +14,10 @@ export interface TokenExpiryConfig {
 
 export interface OAuthConfig {
   googleClientId?: string;
+  googleClientSecret?: string;
   googleRedirectUri?: string;
   githubClientId?: string;
+  githubClientSecret?: string;
   githubRedirectUri?: string;
 }
 
@@ -130,6 +132,15 @@ export function loadAndValidateConfig(): AppConfig {
     // Fallback to original
   }
 
+  const isProductionMode = nodeEnv === 'production';
+  const googleRedirectUri = isProductionMode
+    ? (process.env.GOOGLE_REDIRECT_URI_PROD || process.env.GOOGLE_REDIRECT_URI)
+    : (process.env.GOOGLE_REDIRECT_URI_DEV || process.env.GOOGLE_REDIRECT_URI);
+
+  const githubRedirectUri = isProductionMode
+    ? (process.env.GITHUB_REDIRECT_URI_PROD || process.env.GITHUB_REDIRECT_URI)
+    : (process.env.GITHUB_REDIRECT_URI_DEV || process.env.GITHUB_REDIRECT_URI);
+
   return {
     port,
     nodeEnv,
@@ -148,9 +159,11 @@ export function loadAndValidateConfig(): AppConfig {
     },
     oauth: {
       googleClientId: process.env.GOOGLE_CLIENT_ID,
-      googleRedirectUri: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:8000/api/auth/oauth/google/callback',
+      googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      googleRedirectUri,
       githubClientId: process.env.GITHUB_CLIENT_ID,
-      githubRedirectUri: process.env.GITHUB_REDIRECT_URI || 'http://localhost:8000/api/auth/oauth/github/callback'
+      githubClientSecret: process.env.GITHUB_CLIENT_SECRET,
+      githubRedirectUri,
     },
     bootstrapAdmin: {
       email: process.env.ADMIN_EMAIL,
