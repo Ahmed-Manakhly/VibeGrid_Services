@@ -17,7 +17,17 @@ export function loadAndValidateOnboardingConfig(): OnboardingAppConfig {
 
   const databaseUrl = process.env.DATABASE_URL;
   const rabbitUrl = process.env.RABBITMQ_URL;
-  const redisUrl = process.env.REDIS_URL;
+  let redisUrl = process.env.REDIS_URL;
+
+  if (!redisUrl) {
+    if (nodeEnv === 'docker_development') {
+      redisUrl = process.env.REDIS_URL_DOCKER_DEV;
+    } else if (nodeEnv === 'production') {
+      redisUrl = process.env.REDIS_URL_PROD;
+    } else {
+      redisUrl = process.env.REDIS_URL_DEV;
+    }
+  }
 
   const missingVars: string[] = [];
   if (!databaseUrl) missingVars.push('DATABASE_URL');
@@ -28,6 +38,21 @@ export function loadAndValidateOnboardingConfig(): OnboardingAppConfig {
     throw new Error(`[Config Error] Missing required environment variables in Onboarding Service: ${missingVars.join(', ')}`);
   }
 
+  let formattedRedisUrl = redisUrl || 'redis://localhost:6379';
+  try {
+    if (formattedRedisUrl.includes('@') && formattedRedisUrl.startsWith('redis://')) {
+      const parts = formattedRedisUrl.replace('redis://', '').split('@');
+      const creds = parts[0].split(':');
+      if (creds.length === 2) {
+        const user = encodeURIComponent(decodeURIComponent(creds[0]));
+        const pass = encodeURIComponent(decodeURIComponent(creds[1]));
+        formattedRedisUrl = `redis://${user}:${pass}@${parts[1]}`;
+      }
+    }
+  } catch (e) {
+    // Fallback to original if parsing fails
+  }
+
   const prismaDbPush = process.env.PRISMA_DB_PUSH === 'true' || nodeEnv === 'development';
 
   return {
@@ -35,7 +60,7 @@ export function loadAndValidateOnboardingConfig(): OnboardingAppConfig {
     nodeEnv,
     databaseUrl: databaseUrl!,
     rabbitUrl: rabbitUrl!,
-    redisUrl: redisUrl!,
+    redisUrl: formattedRedisUrl,
     prismaDbPush,
   };
 }

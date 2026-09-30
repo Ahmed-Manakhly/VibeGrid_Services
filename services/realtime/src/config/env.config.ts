@@ -16,15 +16,41 @@ export interface RealtimeConfig {
 export function getRealtimeConfig(): RealtimeConfig {
   const nodeEnv = process.env.NODE_ENV || 'development';
 
-  const redisUrl = process.env.REDIS_URL;
-  if (!redisUrl) {
+  let rawRedisUrl = process.env.REDIS_URL;
+
+  if (!rawRedisUrl) {
+    if (nodeEnv === 'docker_development') {
+      rawRedisUrl = process.env.REDIS_URL_DOCKER_DEV;
+    } else if (nodeEnv === 'production') {
+      rawRedisUrl = process.env.REDIS_URL_PROD;
+    } else {
+      rawRedisUrl = process.env.REDIS_URL_DEV;
+    }
+  }
+
+  if (!rawRedisUrl) {
     throw new Error('[Config Error] Missing required environment variable in Realtime Service: REDIS_URL');
+  }
+
+  let formattedRedisUrl = rawRedisUrl;
+  try {
+    if (formattedRedisUrl.includes('@') && formattedRedisUrl.startsWith('redis://')) {
+      const parts = formattedRedisUrl.replace('redis://', '').split('@');
+      const creds = parts[0].split(':');
+      if (creds.length === 2) {
+        const user = encodeURIComponent(decodeURIComponent(creds[0]));
+        const pass = encodeURIComponent(decodeURIComponent(creds[1]));
+        formattedRedisUrl = `redis://${user}:${pass}@${parts[1]}`;
+      }
+    }
+  } catch (e) {
+    // Fallback to original if parsing fails
   }
 
   const defaultKeyPath = path.resolve(__dirname, '../../../auth/secrets/jwt.public.key');
   return {
     port: parseInt(process.env.PORT || '8005', 10),
-    redisUrl,
+    redisUrl: formattedRedisUrl,
     jwtPublicKeyPath: process.env.JWT_PUBLIC_KEY_PATH || defaultKeyPath,
     jwtPublicKey: process.env.JWT_PUBLIC_KEY,
     nodeEnv,

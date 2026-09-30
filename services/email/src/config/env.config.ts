@@ -21,7 +21,17 @@ export function loadAndValidateEmailConfig(): EmailAppConfig {
   const nodeEnv = process.env.NODE_ENV || 'development';
 
   const rabbitUrl = process.env.RABBITMQ_URL;
-  const redisUrl = process.env.REDIS_URL;
+  let redisUrl = process.env.REDIS_URL;
+
+  if (!redisUrl) {
+    if (nodeEnv === 'docker_development') {
+      redisUrl = process.env.REDIS_URL_DOCKER_DEV;
+    } else if (nodeEnv === 'production') {
+      redisUrl = process.env.REDIS_URL_PROD;
+    } else {
+      redisUrl = process.env.REDIS_URL_DEV;
+    }
+  }
 
   const missingVars: string[] = [];
   if (!rabbitUrl) missingVars.push('RABBITMQ_URL');
@@ -31,11 +41,26 @@ export function loadAndValidateEmailConfig(): EmailAppConfig {
     throw new Error(`[Config Error] Missing required environment variables in Email Service: ${missingVars.join(', ')}`);
   }
 
+  let formattedRedisUrl = redisUrl || 'redis://localhost:6379';
+  try {
+    if (formattedRedisUrl.includes('@') && formattedRedisUrl.startsWith('redis://')) {
+      const parts = formattedRedisUrl.replace('redis://', '').split('@');
+      const creds = parts[0].split(':');
+      if (creds.length === 2) {
+        const user = encodeURIComponent(decodeURIComponent(creds[0]));
+        const pass = encodeURIComponent(decodeURIComponent(creds[1]));
+        formattedRedisUrl = `redis://${user}:${pass}@${parts[1]}`;
+      }
+    }
+  } catch (e) {
+    // Fallback to original if parsing fails
+  }
+
   return {
     port,
     nodeEnv,
     rabbitUrl: rabbitUrl!,
-    redisUrl: redisUrl!,
+    redisUrl: formattedRedisUrl,
     smtp: {
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
       port: parseInt(process.env.SMTP_PORT || '587', 10),
