@@ -16,23 +16,13 @@ export interface RealtimeConfig {
 export function getRealtimeConfig(): RealtimeConfig {
   const nodeEnv = process.env.NODE_ENV || 'development';
 
-  let rawRedisUrl = process.env.REDIS_URL;
+  const redisUrl = process.env.REDIS_URL;
 
-  if (!rawRedisUrl) {
-    if (nodeEnv === 'docker_development') {
-      rawRedisUrl = process.env.REDIS_URL_DOCKER_DEV;
-    } else if (nodeEnv === 'production') {
-      rawRedisUrl = process.env.REDIS_URL_PROD;
-    } else {
-      rawRedisUrl = process.env.REDIS_URL_DEV;
-    }
-  }
-
-  if (!rawRedisUrl) {
+  if (!redisUrl) {
     throw new Error('[Config Error] Missing required environment variable in Realtime Service: REDIS_URL');
   }
 
-  let formattedRedisUrl = rawRedisUrl;
+  let formattedRedisUrl = redisUrl;
   try {
     if (formattedRedisUrl.includes('@') && formattedRedisUrl.startsWith('redis://')) {
       const parts = formattedRedisUrl.replace('redis://', '').split('@');

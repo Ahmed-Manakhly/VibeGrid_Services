@@ -17,17 +17,7 @@ export function loadAndValidateOnboardingConfig(): OnboardingAppConfig {
 
   const databaseUrl = process.env.DATABASE_URL;
   const rabbitUrl = process.env.RABBITMQ_URL;
-  let redisUrl = process.env.REDIS_URL;
-
-  if (!redisUrl) {
-    if (nodeEnv === 'docker_development') {
-      redisUrl = process.env.REDIS_URL_DOCKER_DEV;
-    } else if (nodeEnv === 'production') {
-      redisUrl = process.env.REDIS_URL_PROD;
-    } else {
-      redisUrl = process.env.REDIS_URL_DEV;
-    }
-  }
+  const redisUrl = process.env.REDIS_URL;
 
   const missingVars: string[] = [];
   if (!databaseUrl) missingVars.push('DATABASE_URL');

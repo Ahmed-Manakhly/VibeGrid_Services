@@ -57,7 +57,9 @@ services:
     image: redis:7-alpine
     container_name: vibegrid_redis
     restart: unless-stopped
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_secret}
+    env_file:
+      - ../.env
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "VgRedis_R2026#m4$ZpQ!9wKx"]
     ports:
       - "6379:6379"
     volumes:
@@ -197,7 +199,7 @@ services:
     environment:
       PORT: 8003
       NODE_ENV: docker_development
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@vibegrid_rabbitmq:5672
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-vibegrid}:${RABBITMQ_PASS:-guest}@vibegrid_rabbitmq:5672
       REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret}@vibegrid_redis:6379
     volumes:
       - ../logs/email:/app/logs
@@ -226,7 +228,7 @@ services:
       PORT: 8004
       NODE_ENV: docker_development
       DATABASE_URL: postgresql://${POSTGRES_USER:-vibegrid}:${POSTGRES_PASSWORD:-vibegrid_secret}@vibegrid_postgres:5432/${POSTGRES_DB:-vibegrid_db}?schema=public
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@vibegrid_rabbitmq:5672
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-vibegrid}:${RABBITMQ_PASS:-guest}@vibegrid_rabbitmq:5672
       REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret}@vibegrid_redis:6379
     volumes:
       - ../logs/onboarding:/app/logs
