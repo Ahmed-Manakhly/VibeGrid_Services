@@ -59,7 +59,7 @@ services:
     restart: unless-stopped
     env_file:
       - ../.env
-    command: ["redis-server", "--appendonly", "yes", "--requirepass", "VgRedis_R2026#m4$ZpQ!9wKx"]
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-redis_secret}"]
     ports:
       - "6379:6379"
     volumes:

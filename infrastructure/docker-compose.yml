@@ -117,7 +117,7 @@ services:
       PORT: ${AUTH_PORT:-8001}
       NODE_ENV: production
       MONGO_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-admin_secret}@vibegrid_mongo:27017/${MONGO_AUTH_DB:-auth_db}?authSource=admin
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@vibegrid_rabbitmq:5672
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-vibegrid}:${RABBITMQ_PASS:-guest}@vibegrid_rabbitmq:5672
       JWT_PRIVATE_KEY_PATH: ${JWT_PRIVATE_KEY_PATH:-/app/secrets/jwt.private.key}
       JWT_PUBLIC_KEY_PATH: ${JWT_PUBLIC_KEY_PATH:-/app/secrets/jwt.public.key}
     volumes:
@@ -172,7 +172,7 @@ services:
     environment:
       PORT: ${EMAIL_PORT:-8003}
       NODE_ENV: production
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@vibegrid_rabbitmq:5672
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-vibegrid}:${RABBITMQ_PASS:-guest}@vibegrid_rabbitmq:5672
       REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret}@vibegrid_redis:6379
     depends_on:
       vibegrid_rabbitmq:
@@ -195,7 +195,7 @@ services:
       PORT: ${ONBOARDING_PORT:-8004}
       NODE_ENV: production
       DATABASE_URL: postgresql://${POSTGRES_USER:-vibegrid}:${POSTGRES_PASSWORD:-vibegrid_secret}@vibegrid_postgres:5432/${POSTGRES_DB:-vibegrid_db}?schema=public
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@vibegrid_rabbitmq:5672
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-vibegrid}:${RABBITMQ_PASS:-guest}@vibegrid_rabbitmq:5672
       REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret}@vibegrid_redis:6379
     depends_on:
       vibegrid_postgres:
