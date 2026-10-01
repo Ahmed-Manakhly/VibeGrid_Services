@@ -1,5 +1,6 @@
 import express from 'express';
 import Redis from 'ioredis';
+import { createLogger } from '@vibegrid/logger';
 import { loadAndValidateEmailConfig } from './config/env.config';
 import { NodemailerAdapter } from './infrastructure/email-providers/NodemailerAdapter';
 import { RedisIdempotencyRepository } from './infrastructure/persistence/RedisIdempotencyRepository';
@@ -7,15 +8,17 @@ import { ProcessEmailEventUseCase } from './application/use-cases/ProcessEmailEv
 import { RabbitMQConsumer } from './infrastructure/messaging/RabbitMQConsumer';
 import { HealthController } from './interface/controllers/HealthController';
 
+const logger = createLogger('vibegrid-email');
+
 async function bootstrap() {
   const config = loadAndValidateEmailConfig();
 
-  console.log('🚀 Starting VibeGrid Email Service...');
+  logger.info('🚀 Starting VibeGrid Email Service...');
 
   // 1. Redis Connection
   const redisClient = new Redis(config.redisUrl);
-  redisClient.on('connect', () => console.log('✅ Connected to Redis for Email Idempotency'));
-  redisClient.on('error', (err) => console.error('❌ Redis Connection Error:', err));
+  redisClient.on('connect', () => logger.info('✅ Connected to Redis for Email Idempotency'));
+  redisClient.on('error', (err) => logger.error('❌ Redis Connection Error', { error: err }));
 
   // 2. Email Provider Adapter
   const emailProvider = new NodemailerAdapter(config.smtp);
@@ -37,9 +40,19 @@ async function bootstrap() {
     processEmailUseCase
   );
 
-  await rabbitConsumer.start().catch((err) => {
-    console.error('❌ Failed to start RabbitMQ Email Consumer:', err);
-  });
+  let rabbitConnected = false;
+  let attempts = 0;
+  while (!rabbitConnected && attempts < 10) {
+    try {
+      await rabbitConsumer.start();
+      rabbitConnected = true;
+      logger.info('✅ Connected to RabbitMQ in Email Service');
+    } catch (err: any) {
+      attempts++;
+      logger.warn(`⚠️ Failed to connect RabbitMQ in Email Service (Attempt ${attempts}/10): ${err.message}. Retrying in 3s...`);
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+    }
+  }
 
   // 5. Express HTTP Server for Health Checks
   const app = express();
@@ -48,12 +61,12 @@ async function bootstrap() {
   app.get('/health', HealthController.getHealth);
 
   const server = app.listen(config.port, () => {
-    console.log(`✅ Email Service running on port ${config.port}`);
+    logger.info(`✅ Email Service running on port ${config.port}`, { port: config.port });
   });
 
   // Graceful Shutdown
   const shutdown = async () => {
-    console.log('\n🛑 Shutting down Email Service...');
+    logger.info('🛑 Shutting down Email Service...');
     server.close();
     await rabbitConsumer.stop();
     redisClient.disconnect();
@@ -65,6 +78,6 @@ async function bootstrap() {
 }
 
 bootstrap().catch((err) => {
-  console.error('💥 Fatal Email Service Bootstrap Error:', err);
+  logger.error('Fatal Email Service Bootstrap Error', { error: err });
   process.exit(1);
 });

@@ -30,11 +30,16 @@ describe('VerifyEmailUseCase & SendEmailVerificationTokenUseCase', () => {
       sendEmailVerification: jest.fn().mockResolvedValue(undefined)
     };
 
+    const mockEventPublisher = {
+      publish: jest.fn().mockResolvedValue(undefined)
+    };
+
     verifyEmailUseCase = new VerifyEmailUseCase(mockUserAuthRepo, mockEmailTokenRepo);
     sendEmailVerificationTokenUseCase = new SendEmailVerificationTokenUseCase(
       mockUserAuthRepo,
       mockEmailTokenRepo,
-      mockEmailSender
+      mockEmailSender,
+      mockEventPublisher as any
     );
   });
 

@@ -1,6 +1,9 @@
 import { AppConfig } from '../config/env';
 import { AdminCreateUserUseCase } from '../application/use-cases/AdminCreateUser.usecase';
 import { MongoUserAuthRepo } from '../infrastructure/persistence/MongoUserAuthRepo';
+import { createLogger } from '@vibegrid/logger';
+
+const logger = createLogger('vibegrid-auth');
 
 export async function ensureBootstrapUsers(
   config: AppConfig,
@@ -12,7 +15,7 @@ export async function ensureBootstrapUsers(
   if (config.bootstrapDev?.email && config.bootstrapDev?.password) {
     const existing = await userAuthRepo.findByEmail(config.bootstrapDev.email.toLowerCase());
     if (existing) {
-      console.log(`ℹ️  Bootstrap dev user already exists — skipping: ${config.bootstrapDev.email}`);
+      logger.info('ℹ️  Bootstrap dev user already exists — skipping');
     } else {
       try {
         await adminCreateUserUseCase.execute({
@@ -23,9 +26,9 @@ export async function ensureBootstrapUsers(
           isActive: true,
           isEmailVerified: true   // Bootstrap users bypass OTP — account is trusted from config
         });
-        console.log(`✅ Bootstrap dev user created: ${config.bootstrapDev.email}`);
+        logger.info('✅ Bootstrap dev user created successfully');
       } catch (err: any) {
-        console.log(`ℹ️  Bootstrap dev user note: ${err.message}`);
+        logger.warn('ℹ️  Bootstrap dev user initialization note', { error: err.message });
       }
     }
   }
@@ -35,12 +38,12 @@ export async function ensureBootstrapUsers(
     // First check if an admin with this exact email already exists
     const existingByEmail = await userAuthRepo.findByEmail(config.bootstrapAdmin.email.toLowerCase());
     if (existingByEmail) {
-      console.log(`ℹ️  Bootstrap admin user already exists — skipping: ${config.bootstrapAdmin.email}`);
+      logger.info('ℹ️  Bootstrap admin user already exists — skipping');
     } else {
       // Also guard: if ANY admin already exists in the DB don't create a duplicate
       const anyAdmin = await userAuthRepo.findFirstByRole('ADMIN');
       if (anyAdmin) {
-        console.log(`ℹ️  An ADMIN user already exists in the DB — skipping bootstrap admin creation.`);
+        logger.info('ℹ️  An ADMIN user already exists in DB — skipping bootstrap admin creation');
       } else {
         try {
           await adminCreateUserUseCase.execute({
@@ -51,9 +54,9 @@ export async function ensureBootstrapUsers(
             isActive: true,
             isEmailVerified: true   // Bootstrap users bypass OTP — account is trusted from config
           });
-          console.log(`✅ Bootstrap admin user created: ${config.bootstrapAdmin.email}`);
+          logger.info('✅ Bootstrap admin user created successfully');
         } catch (err: any) {
-          console.log(`ℹ️  Bootstrap admin user note: ${err.message}`);
+          logger.warn('ℹ️  Bootstrap admin user initialization note', { error: err.message });
         }
       }
     }

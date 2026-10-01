@@ -66,6 +66,7 @@ export function createContainer(config: AppConfig, eventPublisher: RabbitMQPubli
     userAuthRepo,
     emailTokenRepo,
     emailSender,
+    eventPublisher,
     config.tokenExpiry.emailVerificationTokenExpiresInSec
   );
 

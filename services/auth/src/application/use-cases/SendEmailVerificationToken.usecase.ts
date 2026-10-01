@@ -1,11 +1,16 @@
 import { IUserAuthRepository } from '../../domain/ports/IUserAuthRepository';
 import { IEmailTokenRepository } from '../../domain/ports/IEmailTokenRepository';
 import { IEmailSender } from '../../domain/ports/IEmailSender';
+import { IEventPublisher } from '../../domain/ports/IEventPublisher';
 import { IEmailVerificationService, SendEmailVerificationInput } from '../../domain/ports/IEmailVerificationService';
 import { EmailToken } from '../../domain/entities/EmailToken.entity';
 import { EmailValidator } from '../../domain/value-objects/EmailValidator.vo';
+import { EmailVerificationRequestedEvent } from '../../domain/events/EmailVerificationRequested.event';
 import { ValidationError, UserNotFoundError } from '../errors/errors';
+import { createLogger } from '@vibegrid/logger';
 import crypto from 'crypto';
+
+const logger = createLogger('vibegrid-auth');
 
 export interface SendEmailVerificationInputDTO extends SendEmailVerificationInput {
   email: string;
@@ -16,6 +21,7 @@ export class SendEmailVerificationTokenUseCase implements IEmailVerificationServ
     private userAuthRepo: IUserAuthRepository,
     private emailTokenRepo: IEmailTokenRepository,
     private emailSender: IEmailSender,
+    private eventPublisher: IEventPublisher,
     private tokenExpiryInSec: number = 900
   ) {}
 
@@ -63,7 +69,29 @@ export class SendEmailVerificationTokenUseCase implements IEmailVerificationServ
 
     await this.emailTokenRepo.upsert(tokenEntity);
 
-    // Send verification email via domain port — template rendering is handled by infrastructure
+    // 1. Publish Event-Driven Message (Pub/Sub) to RabbitMQ for Email Service Worker
+    const verificationEvent = new EmailVerificationRequestedEvent({
+      email: normalizedEmail,
+      name: user.name,
+      otp,
+      expiresInMinutes,
+      requestedAt: new Date()
+    });
+
+    try {
+      await this.eventPublisher.publish(verificationEvent.eventName, {
+        eventId: verificationEvent.eventId,
+        eventName: verificationEvent.eventName,
+        correlationId: verificationEvent.correlationId,
+        timestamp: verificationEvent.timestamp,
+        version: verificationEvent.version,
+        payload: verificationEvent.payload
+      });
+    } catch (err: any) {
+      logger.warn(`Failed to publish verification event for user`, { error: err });
+    }
+
+    // 2. Direct fallback send if local email sender is configured
     try {
       await this.emailSender.sendEmailVerification({
         to: normalizedEmail,
@@ -72,7 +100,8 @@ export class SendEmailVerificationTokenUseCase implements IEmailVerificationServ
         expiresInMinutes
       });
     } catch (err: any) {
-      console.warn(`[SendEmailVerificationTokenUseCase] Failed to send email to ${normalizedEmail}: ${err?.message || err}`);
+      // Fallback logged via structured logger — PII (email/otp) automatically redacted
+      logger.warn(`Direct email sender fallback failed`, { error: err });
     }
 
     return { message: 'Verification OTP code sent to your email' };
