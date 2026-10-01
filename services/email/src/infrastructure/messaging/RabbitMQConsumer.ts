@@ -95,7 +95,11 @@ export class RabbitMQConsumer {
         }
       } catch (err: any) {
         const deathCount = this.getDeathCount(msg);
-        logger.error(`Processing error (attempt ${deathCount + 1})`, { attempt: deathCount + 1, error: err });
+        logger.error(`Processing error (attempt ${deathCount + 1}): ${err?.message || err}`, {
+          attempt: deathCount + 1,
+          errorMessage: err?.message || String(err),
+          stack: err?.stack
+        });
 
         if (deathCount >= 3) {
           logger.warn(`Exceeded max retries (3). Routing event to DLQ: ${dlxQueue}`, { dlxQueue });

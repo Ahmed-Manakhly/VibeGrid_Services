@@ -88,7 +88,16 @@ export class RegisterUserUseCase {
       version: 1
     });
 
-    await this.eventPublisher.publish(registeredEvent.eventName, registeredEvent.payload);
+    const eventId = crypto.randomUUID();
+    const occurredAt = new Date().toISOString();
+    await this.eventPublisher.publish(registeredEvent.eventName, {
+      eventId,
+      eventName: registeredEvent.eventName,
+      occurredAt,
+      version: 1,
+      correlationId: eventId,
+      payload: registeredEvent.payload
+    });
 
     return {
       isVerificationRequired: true,

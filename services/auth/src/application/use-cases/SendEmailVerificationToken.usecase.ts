@@ -79,6 +79,7 @@ export class SendEmailVerificationTokenUseCase implements IEmailVerificationServ
     await this.eventPublisher.publish(verificationEvent.eventName, {
       eventId: verificationEvent.eventId,
       eventName: verificationEvent.eventName,
+      occurredAt: verificationEvent.occurredAt,
       correlationId: verificationEvent.correlationId,
       timestamp: verificationEvent.timestamp,
       version: verificationEvent.version,

@@ -12,12 +12,14 @@ export class EmailVerificationRequestedEvent {
   public readonly eventName = 'email.verification.requested';
   public readonly eventId: string;
   public readonly correlationId: string;
+  public readonly occurredAt: string;
   public readonly timestamp: string;
   public readonly version = 1;
 
   constructor(public readonly payload: EmailVerificationRequestedPayload) {
     this.eventId = crypto.randomUUID();
     this.correlationId = this.eventId;
-    this.timestamp = new Date().toISOString();
+    this.occurredAt = new Date().toISOString();
+    this.timestamp = this.occurredAt;
   }
 }

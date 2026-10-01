@@ -2,7 +2,6 @@ import { RequestPasswordResetUseCase } from '../RequestPasswordReset.usecase';
 import { IUserAuthRepository } from '../../../domain/ports/IUserAuthRepository';
 import { IEmailTokenRepository } from '../../../domain/ports/IEmailTokenRepository';
 import { IPasswordHasher } from '../../../domain/ports/IPasswordHasher';
-import { IEmailSender } from '../../../domain/ports/IEmailSender';
 import { UserAuth } from '../../../domain/entities/UserAuth.entity';
 import { EmailToken } from '../../../domain/entities/EmailToken.entity';
 import { RateLimitError } from '../../errors/errors';
@@ -11,7 +10,7 @@ describe('RequestPasswordResetUseCase — CSPRNG OTP Generation', () => {
   let mockUserAuthRepo: jest.Mocked<IUserAuthRepository>;
   let mockEmailTokenRepo: jest.Mocked<IEmailTokenRepository>;
   let mockPasswordHasher: jest.Mocked<IPasswordHasher>;
-  let mockEmailSender: jest.Mocked<IEmailSender>;
+  let mockEventPublisher: any;
   let requestPasswordResetUseCase: RequestPasswordResetUseCase;
 
   beforeEach(() => {
@@ -36,16 +35,15 @@ describe('RequestPasswordResetUseCase — CSPRNG OTP Generation', () => {
       verify: jest.fn()
     };
 
-    mockEmailSender = {
-      sendEmail: jest.fn().mockResolvedValue(undefined),
-      sendEmailVerification: jest.fn().mockResolvedValue(undefined)
+    mockEventPublisher = {
+      publish: jest.fn().mockResolvedValue(undefined)
     };
 
     requestPasswordResetUseCase = new RequestPasswordResetUseCase(
       mockUserAuthRepo,
       mockEmailTokenRepo,
       mockPasswordHasher,
-      mockEmailSender
+      mockEventPublisher
     );
   });
 
@@ -82,10 +80,13 @@ describe('RequestPasswordResetUseCase — CSPRNG OTP Generation', () => {
       })
     );
 
-    expect(mockEmailSender.sendEmail).toHaveBeenCalledWith(
+    expect(mockEventPublisher.publish).toHaveBeenCalledWith(
+      'password.reset.requested',
       expect.objectContaining({
-        to: 'user@example.com',
-        html: expect.stringContaining(generatedOtp)
+        payload: expect.objectContaining({
+          email: 'user@example.com',
+          otp: generatedOtp
+        })
       })
     );
 
