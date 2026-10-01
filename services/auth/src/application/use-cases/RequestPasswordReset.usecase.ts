@@ -1,22 +1,25 @@
 import { IUserAuthRepository } from '../../domain/ports/IUserAuthRepository';
 import { IEmailTokenRepository } from '../../domain/ports/IEmailTokenRepository';
-import { IEmailSender } from '../../domain/ports/IEmailSender';
+import { IEventPublisher } from '../../domain/ports/IEventPublisher';
 import { IPasswordHasher } from '../../domain/ports/IPasswordHasher';
 import { EmailToken } from '../../domain/entities/EmailToken.entity';
+import { PasswordResetRequestedEvent } from '../../domain/events/PasswordResetRequested.event';
+import { AccountLockedError, RateLimitError } from '../errors/errors';
+import { createLogger } from '@vibegrid/logger';
+import crypto from 'crypto';
+
+const logger = createLogger('vibegrid-auth');
 
 export interface RequestPasswordResetInput {
   email: string;
 }
-
-import { AccountLockedError, RateLimitError } from '../errors/errors';
-import crypto from 'crypto';
 
 export class RequestPasswordResetUseCase {
   constructor(
     private userAuthRepo: IUserAuthRepository,
     private emailTokenRepo: IEmailTokenRepository,
     private passwordHasher: IPasswordHasher,
-    private emailSender: IEmailSender
+    private eventPublisher: IEventPublisher
   ) {}
 
   public async execute(input: RequestPasswordResetInput): Promise<{ message: string }> {
@@ -56,12 +59,25 @@ export class RequestPasswordResetUseCase {
 
     await this.emailTokenRepo.upsert(emailTokenEntity);
 
-    // 6. Send email with plain text OTP
-    await this.emailSender.sendEmail({
-      to: email,
-      subject: 'Verify Your Email — Password Reset',
-      html: `<h1>VibeGrid Password Reset</h1><p>Your OTP code is <b>${otp}</b>.</p><p>It expires in 5 minutes.</p>`
+    // 6. Publish PasswordResetRequested event to RabbitMQ for Email Microservice Worker
+    const resetEvent = new PasswordResetRequestedEvent({
+      email,
+      name: user.name,
+      otp,
+      expiresInMinutes: 5,
+      requestedAt: new Date()
     });
+
+    await this.eventPublisher.publish(resetEvent.eventName, {
+      eventId: resetEvent.eventId,
+      eventName: resetEvent.eventName,
+      correlationId: resetEvent.correlationId,
+      timestamp: resetEvent.timestamp,
+      version: resetEvent.version,
+      payload: resetEvent.payload
+    });
+
+    logger.info('Published password.reset.requested event for user', { eventId: resetEvent.eventId });
 
     return { message: 'OTP sent to your email.' };
   }

@@ -3,7 +3,6 @@ import { MongoUserAuthRepo } from '../infrastructure/persistence/MongoUserAuthRe
 import { MongoRefreshTokenRepo } from '../infrastructure/persistence/MongoRefreshTokenRepo';
 import { MongoRevokedTokenRepo } from '../infrastructure/persistence/MongoRevokedTokenRepo';
 import { MongoEmailTokenRepo } from '../infrastructure/persistence/MongoEmailTokenRepo';
-import { NodemailerEmailSender } from '../infrastructure/email/NodemailerEmailSender';
 import { Argon2Hasher } from '../infrastructure/security/Argon2Hasher';
 import { RS256TokenSigner } from '../infrastructure/security/RS256TokenSigner';
 import { RabbitMQPublisher } from '../infrastructure/messaging/RabbitMQPublisher';
@@ -52,7 +51,6 @@ export function createContainer(config: AppConfig, eventPublisher: RabbitMQPubli
   const refreshTokenRepo = new MongoRefreshTokenRepo();
   const revokedTokenRepo = new MongoRevokedTokenRepo();
   const emailTokenRepo = new MongoEmailTokenRepo();
-  const emailSender = new NodemailerEmailSender();
   const hasher = new Argon2Hasher();
   const tokenSigner = new RS256TokenSigner(
     config.jwtPrivateKeyPath,
@@ -65,7 +63,6 @@ export function createContainer(config: AppConfig, eventPublisher: RabbitMQPubli
   const sendEmailVerificationTokenUseCase = new SendEmailVerificationTokenUseCase(
     userAuthRepo,
     emailTokenRepo,
-    emailSender,
     eventPublisher,
     config.tokenExpiry.emailVerificationTokenExpiresInSec
   );
@@ -98,7 +95,7 @@ export function createContainer(config: AppConfig, eventPublisher: RabbitMQPubli
     userAuthRepo,
     emailTokenRepo,
     hasher,
-    emailSender
+    eventPublisher
   );
 
   const resetPasswordUseCase = new ResetPasswordUseCase(
