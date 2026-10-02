@@ -1,22 +1,25 @@
 import mongoose from 'mongoose';
 import { Server } from 'http';
+import { createLogger } from '@vibegrid/logger';
 import { loadAndValidateConfig } from '../config/env';
 import { RabbitMQPublisher } from '../infrastructure/messaging/RabbitMQPublisher';
 import { createContainer } from '../bootstrap/container';
 import { createApp } from '../bootstrap/createApp';
 import { ensureBootstrapUsers } from '../bootstrap/ensureBootstrapUsers';
 
+const logger = createLogger('vibegrid-auth');
+
 async function bootstrap() {
   // 1. Load and validate environment configuration (Fail-fast)
   const config = loadAndValidateConfig();
-  console.log(`[Auth Service] Starting in ${config.nodeEnv} mode...`);
+  logger.info(`[Auth Service] Starting in ${config.nodeEnv} mode...`);
 
   // 2. Connect MongoDB (Fail-fast on error)
   try {
     await mongoose.connect(config.mongoUri);
-    console.log('✅ Auth Service connected to MongoDB database');
+    logger.info('✅ Auth Service connected to MongoDB database');
   } catch (err: any) {
-    console.error('❌ Fatal error: Failed to connect to MongoDB:', err.message);
+    logger.error('❌ Fatal error: Failed to connect to MongoDB', err);
     process.exit(1);
   }
 
@@ -24,9 +27,9 @@ async function bootstrap() {
   const eventPublisher = new RabbitMQPublisher(config.rabbitmqUrl);
   try {
     await eventPublisher.connect();
-    console.log('✅ Auth Service connected to RabbitMQ broker');
+    logger.info('✅ Auth Service connected to RabbitMQ broker');
   } catch (err: any) {
-    console.warn('⚠️ Warning: RabbitMQ connection unavailable:', err.message);
+    logger.warn('⚠️ Warning: RabbitMQ connection unavailable', { error: err.message });
   }
 
   // 4. Create Composition Container & Dependency Graph
@@ -40,9 +43,7 @@ async function bootstrap() {
 
   // 7. Start HTTP Server
   const server: Server = app.listen(config.port, () => {
-    console.log(`🚀 Auth Microservice running on port ${config.port}`);
-    console.log(`   Liveness:  http://localhost:${config.port}/health`);
-    console.log(`   Readiness: http://localhost:${config.port}/ready`);
+    logger.info(`🚀 Auth Microservice running on port ${config.port}`);
   });
 
   // 8. Idempotent Graceful Shutdown Lifecycle
@@ -52,11 +53,12 @@ async function bootstrap() {
     if (isShuttingDown) return;
     isShuttingDown = true;
 
-    console.log(`\n[Auth Service] Received ${signal}. Initiating graceful shutdown...`);
+    logger.info(`[Auth Service] Received ${signal}. Initiating graceful shutdown...`);
 
     // Step A: Stop accepting new HTTP requests
     server.close(async () => {
-      console.log('  [Shutdown] HTTP server closed.');
+      logger.info('  [Shutdown] HTTP server closed.');
+
 
       // Step B: Disconnect RabbitMQ Event Publisher
       try {
