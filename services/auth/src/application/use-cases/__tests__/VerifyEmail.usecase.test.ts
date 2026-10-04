@@ -9,6 +9,7 @@ describe('VerifyEmailUseCase & SendEmailVerificationTokenUseCase', () => {
   let mockUserAuthRepo: any;
   let mockEmailTokenRepo: any;
   let mockEmailSender: any;
+  let mockEventPublisher: any;
 
   let verifyEmailUseCase: VerifyEmailUseCase;
   let sendEmailVerificationTokenUseCase: SendEmailVerificationTokenUseCase;
@@ -30,7 +31,7 @@ describe('VerifyEmailUseCase & SendEmailVerificationTokenUseCase', () => {
       sendEmailVerification: jest.fn().mockResolvedValue(undefined)
     };
 
-    const mockEventPublisher = {
+    mockEventPublisher = {
       publish: jest.fn().mockResolvedValue(undefined)
     };
 
@@ -38,8 +39,7 @@ describe('VerifyEmailUseCase & SendEmailVerificationTokenUseCase', () => {
     sendEmailVerificationTokenUseCase = new SendEmailVerificationTokenUseCase(
       mockUserAuthRepo,
       mockEmailTokenRepo,
-      mockEmailSender,
-      mockEventPublisher as any
+      mockEventPublisher
     );
   });
 
@@ -156,10 +156,13 @@ describe('VerifyEmailUseCase & SendEmailVerificationTokenUseCase', () => {
       const storedToken: EmailToken = mockEmailTokenRepo.upsert.mock.calls[0][0];
       expect(storedToken.tokenHash).not.toEqual('123456'); // Ensure plaintext OTP is NOT stored
 
-      expect(mockEmailSender.sendEmailVerification).toHaveBeenCalledWith(
+      expect(mockEventPublisher.publish).toHaveBeenCalledWith(
+        'email.verification.requested',
         expect.objectContaining({
-          to: 'user@example.com',
-          otp: expect.any(String)
+          payload: expect.objectContaining({
+            email: 'user@example.com',
+            otp: expect.any(String)
+          })
         })
       );
     });

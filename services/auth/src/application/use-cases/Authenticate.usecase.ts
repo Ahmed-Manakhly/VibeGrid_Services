@@ -18,7 +18,8 @@ export class AuthenticateUseCase {
   ) {}
 
   async execute(dto: LoginDTO): Promise<AuthTokensDTO> {
-    const user = await this.userAuthRepo.findByEmail(dto.email);
+    const normalizedEmail = dto.email ? dto.email.trim().toLowerCase() : '';
+    const user = await this.userAuthRepo.findByEmail(normalizedEmail);
     if (!user || !user.passwordHash || user.isDeleted) {
       throw new InvalidCredentialsError('Invalid email or password');
     }

@@ -23,7 +23,7 @@ export class RequestPasswordResetUseCase {
   ) {}
 
   public async execute(input: RequestPasswordResetInput): Promise<{ message: string }> {
-    const email = input.email.toLowerCase();
+    const email = input.email ? input.email.trim().toLowerCase() : '';
 
     // 1. Check if user exists
     const user = await this.userAuthRepo.findByEmail(email);

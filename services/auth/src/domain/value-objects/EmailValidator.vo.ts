@@ -19,4 +19,8 @@ export class EmailValidator {
 
     return { isValid: true };
   }
+
+  public static normalize(email: string): string {
+    return email ? email.trim().toLowerCase() : '';
+  }
 }

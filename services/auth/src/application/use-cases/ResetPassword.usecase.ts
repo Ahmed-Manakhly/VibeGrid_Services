@@ -23,7 +23,7 @@ export class ResetPasswordUseCase {
   ) {}
 
   public async execute(input: ResetPasswordInput): Promise<{ message: string }> {
-    const email = input.email.toLowerCase();
+    const email = input.email ? input.email.trim().toLowerCase() : '';
 
     // 1. Password confirmation check
     if (input.newPassword !== input.confirmPassword) {
