@@ -46,10 +46,11 @@ export class RefreshTokenUseCase {
       throw new UserNotFoundError('User not found');
     }
 
-    // 1. Check user.isActive
-    if (!user.isActive) {
+    // 1. Check user.isActive, isDeleted, and isLockedOut
+    const now = new Date();
+    if (!user.isActive || user.isDeleted || user.isLockedOut(now)) {
       await this.refreshTokenRepo.revokeFamily(familyId);
-      throw new UnauthorizedError('User account is inactive or locked');
+      throw new UnauthorizedError('User account is inactive, locked, or deleted');
     }
 
     // 2. Check passwordChangedAt vs existingToken.createdAt
