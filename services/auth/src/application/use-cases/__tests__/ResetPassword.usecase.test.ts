@@ -115,4 +115,26 @@ describe('ResetPasswordUseCase — Lockout Clearing', () => {
       })
     ).rejects.toThrow(UnauthorizedError);
   });
+
+  it('should allow bypass reset password when fixedSeedOtp matches', async () => {
+    const bypassUseCase = new ResetPasswordUseCase(
+      mockUserAuthRepo,
+      mockEmailTokenRepo,
+      mockPasswordHasher,
+      mockRevokedTokenRepo,
+      '123456'
+    );
+
+    mockUserAuthRepo.findByEmail.mockResolvedValue(lockedUser);
+
+    const result = await bypassUseCase.execute({
+      email,
+      otp: '123456',
+      newPassword,
+      confirmPassword: newPassword
+    });
+
+    expect(result.message).toContain('reset successfully');
+    expect(mockUserAuthRepo.save).toHaveBeenCalled();
+  });
 });

@@ -102,7 +102,8 @@ export function createContainer(config: AppConfig, eventPublisher: RabbitMQPubli
     userAuthRepo,
     emailTokenRepo,
     hasher,
-    revokedTokenRepo
+    revokedTokenRepo,
+    config.fixedSeedOtp
   );
 
   const changePasswordUseCase = new ChangePasswordUseCase(
