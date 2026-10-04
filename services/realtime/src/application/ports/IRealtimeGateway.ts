@@ -21,8 +21,19 @@ export interface PresenceEventDTO {
   timestamp: number;
 }
 
+export interface DirectMessageEventDTO {
+  messageId: string;
+  conversationId: string;
+  senderId: string;
+  senderName?: string;
+  content: string;
+  createdAt: string;
+}
+
 export interface IRealtimeGateway {
   emitNotificationToUser(userId: string, notification: NotificationEventDTO): void;
   emitFeedUpdateToUser(userId: string, feedSignal: FeedSignalDTO): void;
   broadcastPresence(presence: PresenceEventDTO): void;
+  emitDirectMessageToUser(userId: string, messageSignal: DirectMessageEventDTO): void;
 }
+

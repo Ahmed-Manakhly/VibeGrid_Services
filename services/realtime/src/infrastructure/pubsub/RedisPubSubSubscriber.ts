@@ -23,8 +23,8 @@ export class RedisPubSubSubscriber {
       this.logger.error('[RedisPubSubSubscriber] Redis Subscriber Error', { error: err.message });
     });
 
-    await this.subscriberClient.subscribe('realtime:notification', 'realtime:feed', 'realtime:presence');
-    this.logger.info('Subscribed to Redis channels: realtime:notification, realtime:feed, realtime:presence');
+    await this.subscriberClient.subscribe('realtime:notification', 'realtime:feed', 'realtime:presence', 'realtime:direct_message');
+    this.logger.info('Subscribed to Redis channels: realtime:notification, realtime:feed, realtime:presence, realtime:direct_message');
 
     this.subscriberClient.on('message', (channel, message) => {
       try {
@@ -47,6 +47,13 @@ export class RedisPubSubSubscriber {
         } else if (channel === 'realtime:presence') {
           if (payload.userId && payload.status) {
             this.realtimeGateway.broadcastPresence(payload);
+          }
+        } else if (channel === 'realtime:direct_message') {
+          const { recipientIds, ...messageSignal } = payload;
+          if (Array.isArray(recipientIds) && recipientIds.length > 0) {
+            for (const recipientId of recipientIds) {
+              this.realtimeGateway.emitDirectMessageToUser(recipientId, messageSignal as any);
+            }
           }
         }
       } catch (err: any) {

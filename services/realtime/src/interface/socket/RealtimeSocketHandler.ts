@@ -139,6 +139,12 @@ export class RealtimeSocketHandler implements IRealtimeGateway {
     this.logger.info(`Emitted feed:updated to room [${room}]`, { userId, type: feedSignal.type });
   }
 
+  public emitDirectMessageToUser(userId: string, messageSignal: any): void {
+    const room = `user:${userId}`;
+    this.io.to(room).emit('message:new', messageSignal);
+    this.logger.info(`Emitted message:new to room [${room}]`, { userId, messageId: messageSignal.messageId });
+  }
+
   public broadcastPresence(presence: PresenceEventDTO): void {
     const eventName = `presence:${presence.status}`;
     this.io.emit(eventName, presence);
