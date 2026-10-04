@@ -72,6 +72,7 @@ export class RequestPasswordResetUseCase {
       eventId: resetEvent.eventId,
       eventName: resetEvent.eventName,
       correlationId: resetEvent.correlationId,
+      occurredAt: resetEvent.occurredAt,
       timestamp: resetEvent.timestamp,
       version: resetEvent.version,
       payload: resetEvent.payload
