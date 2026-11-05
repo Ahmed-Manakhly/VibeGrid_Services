@@ -295,6 +295,18 @@ services:
     networks:
       - vibegrid_net
 
+  # Nginx Reverse Proxy (Container bound to localhost port 8080 for Next.js Web/BFF)
+  vibegrid_reverse_proxy:
+    image: nginx:alpine
+    container_name: vibegrid_reverse_proxy
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      - ./reverse-proxy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - vibegrid_net
+
 networks:
   vibegrid_net:
     name: vibegrid_net
