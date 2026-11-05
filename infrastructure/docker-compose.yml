@@ -229,7 +229,7 @@ services:
     networks:
       - vibegrid_net
 
-  # Nginx API Gateway (Only container bound to localhost port 8000)
+  # Nginx API Gateway (Only container bound to localhost port 8000 for Microservices)
   vibegrid_api_gateway:
     image: nginx:alpine
     container_name: vibegrid_api_gateway
@@ -248,6 +248,18 @@ services:
       - vibegrid_email
       - vibegrid_onboarding
       - vibegrid_realtime
+    networks:
+      - vibegrid_net
+
+  # Nginx Reverse Proxy (Container bound to localhost port 8080 for Next.js Web/BFF)
+  vibegrid_reverse_proxy:
+    image: nginx:alpine
+    container_name: vibegrid_reverse_proxy
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      - ./reverse-proxy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
       - vibegrid_net
 
