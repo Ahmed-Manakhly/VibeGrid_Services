@@ -106,6 +106,17 @@ export class RealtimeSocketHandler implements IRealtimeGateway {
         }
       }
 
+      // Handle chat:typing event relay
+      socket.on('chat:typing', (payload: { conversationId: string; recipientUserId: string; isTyping: boolean }) => {
+        if (!payload || !payload.recipientUserId) return;
+        const targetRoom = `user:${payload.recipientUserId}`;
+        socket.to(targetRoom).emit('chat:typing', {
+          conversationId: payload.conversationId,
+          userId,
+          isTyping: !!payload.isTyping,
+        });
+      });
+
       // Handle Disconnection
       socket.on('disconnect', async (reason) => {
         this.logger.info(`Socket [${socket.id}] disconnected (reason: ${reason})`, { socketId: socket.id, userId, reason });
