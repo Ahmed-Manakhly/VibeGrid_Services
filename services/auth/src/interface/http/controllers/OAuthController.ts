@@ -22,7 +22,7 @@ export class OAuthController {
 
     const url = `https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(
       redirectUri
-    )}&scope=email%20profile`;
+    )}&scope=email%20profile&prompt=select_account`;
 
     res.redirect(url);
   };
