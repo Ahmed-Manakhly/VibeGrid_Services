@@ -70,4 +70,13 @@ export class RedisPresenceRepository implements IPresenceTracker {
       return { online: false, connectionCount: 0 };
     }
   }
+
+  public async getOnlineUsers(): Promise<string[]> {
+    try {
+      const keys = await this.client.keys('presence:user:*');
+      return keys.map((k) => k.replace('presence:user:', ''));
+    } catch {
+      return [];
+    }
+  }
 }

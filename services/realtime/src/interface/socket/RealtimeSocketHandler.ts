@@ -87,9 +87,11 @@ export class RealtimeSocketHandler implements IRealtimeGateway {
 
       const userId = user.userId;
       const userRoom = `user:${userId}`;
+      const modelLinkRoom = `${userId}__room`;
       socket.join(userRoom);
+      socket.join(modelLinkRoom);
 
-      this.logger.info(`Socket [${socket.id}] joined room [${userRoom}]`, { socketId: socket.id, userId, room: userRoom });
+      this.logger.info(`Socket [${socket.id}] joined rooms [${userRoom}, ${modelLinkRoom}]`, { socketId: socket.id, userId });
 
       // Track Presence
       const presenceResult = await this.presenceTracker.addConnection(userId, socket.id);
@@ -106,14 +108,66 @@ export class RealtimeSocketHandler implements IRealtimeGateway {
         }
       }
 
-      // Handle chat:typing event relay
+      // ModelLink Parity: Send active online users list to connecting socket
+      try {
+        const onlineUserIds = await this.presenceTracker.getOnlineUsers();
+        socket.emit('get-users', onlineUserIds.map((id) => ({ userId: id, socketId: socket.id })));
+      } catch (err) {
+        // Non-blocking
+      }
+
+      // ModelLink Parity: Support 'joinRoom' event if emitted by client
+      socket.on('joinRoom', async (requestedUserId: string) => {
+        if (requestedUserId && requestedUserId === userId) {
+          socket.join(`${userId}__room`);
+          socket.join(`user:${userId}`);
+          const onlineUserIds = await this.presenceTracker.getOnlineUsers();
+          this.io.emit('get-users', onlineUserIds.map((id) => ({ userId: id, socketId: socket.id })));
+        }
+      });
+
+      // ModelLink Parity: Support 'leavingRoom' event
+      socket.on('leavingRoom', async () => {
+        await this.presenceTracker.removeConnection(userId, socket.id);
+        const onlineUserIds = await this.presenceTracker.getOnlineUsers();
+        this.io.emit('get-users', onlineUserIds.map((id) => ({ userId: id, socketId: socket.id })));
+      });
+
+      // Handle chat:typing event relay (and ModelLink 'typing' / 'stopTyping')
       socket.on('chat:typing', (payload: { conversationId: string; recipientUserId: string; isTyping: boolean }) => {
         if (!payload || !payload.recipientUserId) return;
         const targetRoom = `user:${payload.recipientUserId}`;
-        socket.to(targetRoom).emit('chat:typing', {
+        const targetModelLinkRoom = `${payload.recipientUserId}__room`;
+        socket.to(targetRoom).to(targetModelLinkRoom).emit('chat:typing', {
           conversationId: payload.conversationId,
           userId,
           isTyping: !!payload.isTyping,
+        });
+      });
+
+      socket.on('typing', (data: { conversationId: string; forId: string }) => {
+        if (!data?.forId || !data?.conversationId) return;
+        this.io.to(`${data.forId}__room`).to(`user:${data.forId}`).emit('typing', {
+          conversationId: data.conversationId,
+          fromUserId: userId,
+        });
+        this.io.to(`${data.forId}__room`).to(`user:${data.forId}`).emit('chat:typing', {
+          conversationId: data.conversationId,
+          userId,
+          isTyping: true,
+        });
+      });
+
+      socket.on('stopTyping', (data: { conversationId: string; forId: string }) => {
+        if (!data?.forId || !data?.conversationId) return;
+        this.io.to(`${data.forId}__room`).to(`user:${data.forId}`).emit('stopTyping', {
+          conversationId: data.conversationId,
+          fromUserId: userId,
+        });
+        this.io.to(`${data.forId}__room`).to(`user:${data.forId}`).emit('chat:typing', {
+          conversationId: data.conversationId,
+          userId,
+          isTyping: false,
         });
       });
 
