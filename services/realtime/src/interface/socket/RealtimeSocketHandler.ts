@@ -171,6 +171,18 @@ export class RealtimeSocketHandler implements IRealtimeGateway {
         });
       });
 
+      // Handle message:seen event relay
+      socket.on('message:seen', (data: { conversationId: string; recipientUserId: string }) => {
+        if (!data?.conversationId || !data?.recipientUserId) return;
+        const targetRoom = `user:${data.recipientUserId}`;
+        const targetModelLinkRoom = `${data.recipientUserId}__room`;
+        socket.to(targetRoom).to(targetModelLinkRoom).emit('message:seen', {
+          conversationId: data.conversationId,
+          seenByUserId: userId,
+          seenAt: new Date().toISOString(),
+        });
+      });
+
       // Handle Disconnection
       socket.on('disconnect', async (reason) => {
         this.logger.info(`Socket [${socket.id}] disconnected (reason: ${reason})`, { socketId: socket.id, userId, reason });
