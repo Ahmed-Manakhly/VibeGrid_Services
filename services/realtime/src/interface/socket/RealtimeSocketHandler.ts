@@ -176,11 +176,38 @@ export class RealtimeSocketHandler implements IRealtimeGateway {
         if (!data?.conversationId || !data?.recipientUserId) return;
         const targetRoom = `user:${data.recipientUserId}`;
         const targetModelLinkRoom = `${data.recipientUserId}__room`;
-        socket.to(targetRoom).to(targetModelLinkRoom).emit('message:seen', {
+        const payload = {
           conversationId: data.conversationId,
           seenByUserId: userId,
           seenAt: new Date().toISOString(),
-        });
+        };
+        socket.to(targetRoom).to(targetModelLinkRoom).emit('message:seen', payload);
+        this.io.to(targetRoom).to(targetModelLinkRoom).emit('message:seen', payload);
+      });
+
+      // Handle user:block / user:unblock event relay
+      socket.on('user:blocked', (data: { blockedUserId: string }) => {
+        if (!data?.blockedUserId) return;
+        const targetRoom = `user:${data.blockedUserId}`;
+        const targetModelLinkRoom = `${data.blockedUserId}__room`;
+        const payload = {
+          blockerUserId: userId,
+          blockedUserId: data.blockedUserId,
+          timestamp: Date.now(),
+        };
+        this.io.to(targetRoom).to(targetModelLinkRoom).emit('user:blocked', payload);
+      });
+
+      socket.on('user:unblocked', (data: { unblockedUserId: string }) => {
+        if (!data?.unblockedUserId) return;
+        const targetRoom = `user:${data.unblockedUserId}`;
+        const targetModelLinkRoom = `${data.unblockedUserId}__room`;
+        const payload = {
+          unblockerUserId: userId,
+          unblockedUserId: data.unblockedUserId,
+          timestamp: Date.now(),
+        };
+        this.io.to(targetRoom).to(targetModelLinkRoom).emit('user:unblocked', payload);
       });
 
       // Handle Disconnection
@@ -218,8 +245,17 @@ export class RealtimeSocketHandler implements IRealtimeGateway {
 
   public emitDirectMessageToUser(userId: string, messageSignal: any): void {
     const room = `user:${userId}`;
-    this.io.to(room).emit('message:new', messageSignal);
-    this.logger.info(`Emitted message:new to room [${room}]`, { userId, messageId: messageSignal.messageId });
+    const modelLinkRoom = `${userId}__room`;
+    if (messageSignal.type === 'user:blocked') {
+      this.io.to(room).to(modelLinkRoom).emit('user:blocked', messageSignal);
+      this.logger.info(`Emitted user:blocked to room [${room}]`, { userId, blockerUserId: messageSignal.blockerUserId });
+    } else if (messageSignal.type === 'user:unblocked') {
+      this.io.to(room).to(modelLinkRoom).emit('user:unblocked', messageSignal);
+      this.logger.info(`Emitted user:unblocked to room [${room}]`, { userId, unblockerUserId: messageSignal.unblockerUserId });
+    } else {
+      this.io.to(room).to(modelLinkRoom).emit('message:new', messageSignal);
+      this.logger.info(`Emitted message:new to room [${room}]`, { userId, messageId: messageSignal.messageId });
+    }
   }
 
   public broadcastPresence(presence: PresenceEventDTO): void {

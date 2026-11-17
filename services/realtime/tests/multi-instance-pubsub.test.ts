@@ -19,6 +19,7 @@ describe('Realtime Gateway — Cross-Instance Redis Pub/Sub Event Broadcast Test
     addConnection: jest.fn().mockResolvedValue({ isStateChange: true, online: true, connectionCount: 1 }),
     removeConnection: jest.fn().mockResolvedValue({ isStateChange: true, online: false, connectionCount: 0 }),
     getUserStatus: jest.fn().mockResolvedValue({ online: true, connectionCount: 1 }),
+    getOnlineUsers: jest.fn().mockResolvedValue(['test-user-1', 'test-user-2']),
   };
 
   beforeAll((done: jest.DoneCallback) => {

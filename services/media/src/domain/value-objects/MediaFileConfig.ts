@@ -10,9 +10,25 @@ export class MediaFileConfig {
     'image/jpeg',
     'image/png',
     'image/webp',
+    'image/gif',
     'video/mp4',
     'video/webm',
-    'video/quicktime'
+    'video/quicktime',
+    'audio/webm',
+    'audio/mpeg',
+    'audio/mp3',
+    'audio/wav',
+    'audio/ogg',
+    'application/pdf',
+    'application/json',
+    'application/zip',
+    'application/x-zip-compressed',
+    'text/plain',
+    'text/markdown',
+    'text/csv',
+    'text/javascript',
+    'application/typescript',
+    'application/octet-stream'
   ];
   private static readonly POST_ATTACHMENT_MAX_SIZE_BYTES = 100 * 1024 * 1024; // 100MB
 
