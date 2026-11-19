@@ -33,6 +33,7 @@ export interface DirectMessageEventDTO {
 export interface IRealtimeGateway {
   emitNotificationToUser(userId: string, notification: NotificationEventDTO): void;
   emitFeedUpdateToUser(userId: string, feedSignal: FeedSignalDTO): void;
+  broadcastFeedUpdate(feedSignal: FeedSignalDTO): void;
   broadcastPresence(presence: PresenceEventDTO): void;
   emitDirectMessageToUser(userId: string, messageSignal: DirectMessageEventDTO): void;
 }

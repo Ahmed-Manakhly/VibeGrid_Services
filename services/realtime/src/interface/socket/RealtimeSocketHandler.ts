@@ -243,6 +243,11 @@ export class RealtimeSocketHandler implements IRealtimeGateway {
     this.logger.info(`Emitted feed:updated to room [${room}]`, { userId, type: feedSignal.type });
   }
 
+  public broadcastFeedUpdate(feedSignal: FeedSignalDTO): void {
+    this.io.emit('feed:updated', feedSignal);
+    this.logger.info(`Broadcasted feed:updated to all connected users`, { type: feedSignal.type, postId: feedSignal.postId });
+  }
+
   public emitDirectMessageToUser(userId: string, messageSignal: any): void {
     const room = `user:${userId}`;
     const modelLinkRoom = `${userId}__room`;

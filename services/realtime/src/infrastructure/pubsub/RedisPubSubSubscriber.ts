@@ -43,6 +43,9 @@ export class RedisPubSubSubscriber {
             }
           } else if (payload.userId) {
             this.realtimeGateway.emitFeedUpdateToUser(payload.userId, feedSignal as any);
+          } else {
+            // Global broadcast to all connected feed clients
+            this.realtimeGateway.broadcastFeedUpdate(feedSignal as any);
           }
         } else if (channel === 'realtime:presence') {
           if (payload.userId && payload.status) {
