@@ -128,7 +128,9 @@ export class AuthController {
         id: result.user.id,
         email: result.user.email,
         name: result.user.name,
-        role: result.user.role
+        role: result.user.role,
+        isEmailVerified: result.user.isEmailVerified,
+        isPolicyAccepted: Boolean(result.user.isPolicyAccepted),
       }
     });
   };
