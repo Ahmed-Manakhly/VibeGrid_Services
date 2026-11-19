@@ -4,6 +4,7 @@ export interface RegisterDTO {
   passwordConfirm: string;
   name?: string;
   role?: string;
+  agreedToPolicy?: boolean;
 }
 
 export interface LoginDTO {
@@ -20,6 +21,7 @@ export interface AuthTokensDTO {
     name?: string;
     role: string;
     isEmailVerified?: boolean;
+    isPolicyAccepted?: boolean;
   };
 }
 
@@ -38,5 +40,6 @@ export interface RegisterResultDTO {
     name?: string;
     role: string;
     isEmailVerified: boolean;
+    isPolicyAccepted?: boolean;
   };
 }

@@ -63,12 +63,15 @@ export class RegisterUserUseCase {
     }
 
     const hashedPassword = await this.hasher.hash(dto.password);
+    const isPolicyAccepted = Boolean(dto.agreedToPolicy);
     const newUser = UserAuth.create({
       email: normalizedEmail,
       passwordHash: hashedPassword,
       name: dto.name,
       role: assignedRole,
-      provider: 'local'
+      provider: 'local',
+      isPolicyAccepted,
+      policyAcceptedAt: isPolicyAccepted ? new Date() : null,
     });
 
     // Save unverified user aggregate
@@ -106,7 +109,8 @@ export class RegisterUserUseCase {
         email: savedUser.email,
         name: savedUser.name,
         role: savedUser.role,
-        isEmailVerified: savedUser.isEmailVerified
+        isEmailVerified: savedUser.isEmailVerified,
+        isPolicyAccepted: savedUser.isPolicyAccepted,
       }
     };
   }

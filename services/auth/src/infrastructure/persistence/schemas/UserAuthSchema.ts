@@ -10,6 +10,8 @@ export interface IUserAuthDocument extends Document {
   isActive: boolean;
   isEmailVerified: boolean;
   emailVerifiedAt?: Date;
+  isPolicyAccepted: boolean;
+  policyAcceptedAt?: Date;
   passwordChangedAt?: Date;
   failedAttempts: number;
   lockoutUntil?: Date;
@@ -29,6 +31,8 @@ const UserAuthSchema = new Schema<IUserAuthDocument>(
     isActive: { type: Boolean, default: true },
     isEmailVerified: { type: Boolean, default: false },
     emailVerifiedAt: { type: Date },
+    isPolicyAccepted: { type: Boolean, default: false },
+    policyAcceptedAt: { type: Date },
     passwordChangedAt: { type: Date },
     failedAttempts: { type: Number, default: 0 },
     lockoutUntil: { type: Date },

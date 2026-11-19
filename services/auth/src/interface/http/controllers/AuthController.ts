@@ -68,12 +68,19 @@ export class AuthController {
   }
 
   register = async (req: Request, res: Response): Promise<void> => {
-    const { email, password, passwordConfirm, name, role } = req.body;
+    const { email, password, passwordConfirm, name, role, agreedToPolicy } = req.body;
     if (!email || !password || !passwordConfirm) {
       throw new ValidationError('Email, password, and password confirmation are required');
     }
 
-    const result = await this.registerUserUseCase.execute({ email, password, passwordConfirm, name, role });
+    const result = await this.registerUserUseCase.execute({ 
+      email, 
+      password, 
+      passwordConfirm, 
+      name, 
+      role,
+      agreedToPolicy: Boolean(agreedToPolicy)
+    });
 
     logger.info('User registration completed', {
       requestId: (req as any).requestId,
@@ -93,7 +100,8 @@ export class AuthController {
           email: result.user.email,
           name: result.user.name,
           role: result.user.role,
-          isEmailVerified: result.user.isEmailVerified
+          isEmailVerified: result.user.isEmailVerified,
+          isPolicyAccepted: result.user.isPolicyAccepted,
         }
       }
     );

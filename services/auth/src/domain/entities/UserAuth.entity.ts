@@ -9,6 +9,8 @@ export interface UserAuthProps {
   isActive?: boolean;
   isEmailVerified?: boolean;
   emailVerifiedAt?: Date | null;
+  isPolicyAccepted?: boolean;
+  policyAcceptedAt?: Date | null;
   passwordChangedAt?: Date;
   failedAttempts?: number;
   lockoutUntil?: Date | null;
@@ -23,6 +25,7 @@ export class UserAuth {
   private constructor(props: UserAuthProps) {
     const isOAuth = props.provider && props.provider !== 'local';
     const isVerified = props.isEmailVerified !== undefined ? props.isEmailVerified : (isOAuth ? true : false);
+    const isPolicyAccepted = Boolean(props.isPolicyAccepted);
     this.props = {
       ...props,
       provider: props.provider || 'local',
@@ -30,6 +33,8 @@ export class UserAuth {
       isActive: props.isActive !== undefined ? props.isActive : true,
       isEmailVerified: isVerified,
       emailVerifiedAt: props.emailVerifiedAt !== undefined ? props.emailVerifiedAt : (isVerified ? new Date() : null),
+      isPolicyAccepted,
+      policyAcceptedAt: props.policyAcceptedAt !== undefined ? props.policyAcceptedAt : (isPolicyAccepted ? new Date() : null),
       failedAttempts: props.failedAttempts ?? 0,
       lockoutUntil: props.lockoutUntil ?? undefined,
       deletedAt: props.deletedAt ?? undefined,
@@ -81,6 +86,20 @@ export class UserAuth {
 
   public get emailVerifiedAt(): Date | undefined | null {
     return this.props.emailVerifiedAt;
+  }
+
+  public get isPolicyAccepted(): boolean {
+    return Boolean(this.props.isPolicyAccepted);
+  }
+
+  public get policyAcceptedAt(): Date | undefined | null {
+    return this.props.policyAcceptedAt;
+  }
+
+  public acceptPolicy(now: Date = new Date()): void {
+    this.props.isPolicyAccepted = true;
+    this.props.policyAcceptedAt = now;
+    this.props.updatedAt = now;
   }
 
   public verifyEmail(now: Date = new Date()): void {

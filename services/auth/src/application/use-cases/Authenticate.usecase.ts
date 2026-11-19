@@ -99,7 +99,9 @@ export class AuthenticateUseCase {
         id: userId,
         email: user.email,
         name: user.name,
-        role: user.role
+        role: user.role,
+        isEmailVerified: user.isEmailVerified,
+        isPolicyAccepted: user.isPolicyAccepted
       }
     };
   }
