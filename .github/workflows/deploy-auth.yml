@@ -17,6 +17,7 @@ jobs:
 
       - name: Setup environment file
         run: |
+          cp ~/vibegrid-backend/.env ./.env
           cp ~/vibegrid-backend/.env ./infrastructure/.env
 
       - name: Setup secrets
