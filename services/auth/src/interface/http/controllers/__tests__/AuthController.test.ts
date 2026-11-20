@@ -138,7 +138,8 @@ describe('AuthController Response Contract & Cookie Issuance', () => {
           id: 'u1',
           email: 'user@example.com',
           name: 'User One',
-          role: 'CLIENT'
+          role: 'CLIENT',
+          isPolicyAccepted: false
         }
       }
     });
