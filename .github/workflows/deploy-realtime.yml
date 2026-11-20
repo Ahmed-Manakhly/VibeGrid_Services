@@ -1,0 +1,32 @@
+name: Deploy Realtime Service
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'services/realtime/**'
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Setup environment file
+        run: |
+          cp ~/vibegrid-backend/.env ./infrastructure/.env
+
+      - name: Ensure Docker network exists
+        run: |
+          docker network inspect vibegrid_net >/dev/null 2>&1 || docker network create vibegrid_net
+
+      - name: Build and deploy Realtime container
+        run: |
+          docker compose -f infrastructure/docker-compose.yml up -d --build vibegrid_realtime
+
+      - name: System Cleanup
+        run: |
+          docker image prune -f
