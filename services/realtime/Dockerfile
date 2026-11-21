@@ -9,6 +9,7 @@ COPY packages ./packages
 COPY services/realtime ./services/realtime
 
 RUN pnpm install --frozen-lockfile
+RUN pnpm --filter "@vibegrid/*" build
 RUN pnpm --filter @vibegrid/realtime-service build
 
 RUN pnpm --filter @vibegrid/realtime-service deploy --prod /app/deploy

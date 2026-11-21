@@ -9,6 +9,7 @@ COPY packages ./packages
 COPY services/auth ./services/auth
 
 RUN pnpm install --frozen-lockfile
+RUN pnpm --filter "@vibegrid/*" build
 RUN pnpm --filter @vibegrid/auth-service build
 
 # Deploy standalone production bundle

@@ -9,6 +9,7 @@ COPY packages ./packages
 COPY services/media ./services/media
 
 RUN pnpm install --frozen-lockfile
+RUN pnpm --filter "@vibegrid/*" build
 RUN pnpm --filter @vibegrid/media-service build
 
 RUN pnpm --filter @vibegrid/media-service deploy --prod /app/deploy

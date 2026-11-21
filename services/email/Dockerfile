@@ -9,6 +9,7 @@ COPY packages ./packages
 COPY services/email ./services/email
 
 RUN pnpm install --frozen-lockfile
+RUN pnpm --filter "@vibegrid/*" build
 RUN pnpm --filter @vibegrid/email-worker build
 
 RUN pnpm --filter @vibegrid/email-worker deploy --prod /app/deploy

@@ -9,6 +9,7 @@ COPY packages ./packages
 COPY services/onboarding ./services/onboarding
 
 RUN pnpm install --frozen-lockfile
+RUN pnpm --filter "@vibegrid/*" build
 RUN pnpm --filter @vibegrid/onboarding-worker exec prisma generate
 RUN pnpm --filter @vibegrid/onboarding-worker build
 
