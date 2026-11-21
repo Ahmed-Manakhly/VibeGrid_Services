@@ -21,6 +21,10 @@ jobs:
           cp ~/vibegrid-backend/.env ./.env
           cp ~/vibegrid-backend/.env ./infrastructure/.env
 
+      - name: Setup secrets
+        run: |
+          cp -r ~/vibegrid-backend/secrets ./services/auth/secrets
+
       - name: Load AppArmor profiles
         run: |
           sudo mkdir -p /etc/apparmor.d/
