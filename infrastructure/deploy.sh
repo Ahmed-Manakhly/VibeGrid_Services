@@ -85,11 +85,10 @@ echo "✅ Containers started!"
 # ── 4. Wait for API Gateway to be ready ───────────────────────
 echo ""
 echo "[4/4] Waiting for API Gateway to be ready..."
-HEALTH_URL="http://localhost:8000/health"
 MAX_WAIT=90
 WAITED=0
 
-until curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" | grep -q "200"; do
+until docker exec vibegrid_api_gateway wget -qO- http://127.0.0.1:8000/health 2>/dev/null | grep -q "ok"; do
   if [ $WAITED -ge $MAX_WAIT ]; then
     echo "⚠️  API Gateway did not respond in ${MAX_WAIT}s. Check logs:"
     echo "    docker logs -f vibegrid_api_gateway"
@@ -107,9 +106,8 @@ echo ""
 echo "=============================================="
 echo " ✅ Production Stack Running!"
 echo "=============================================="
-echo " API Gateway:      http://localhost:8000"
-echo " Auth Health:      http://localhost:8000/api/auth/health"
-echo " Auth Readiness:   http://localhost:8000/api/auth/ready"
+echo " Reverse Proxy:    http://127.0.0.1:8090"
+echo " API Gateway:      vibegrid_api_gateway:8000 (internal)"
 echo " RabbitMQ UI:      http://localhost:15672"
 echo " MinIO Console:    http://localhost:9001"
 echo ""
