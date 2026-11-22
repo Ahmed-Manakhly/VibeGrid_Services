@@ -19,6 +19,11 @@ const { MongoClient } = require('mongodb');
 
 const includeAdmins = process.argv.includes('--include-admins');
 
+// URL VAR FOR LOCAL (Host native / localhost)
+// const MONGO_URI = "mongodb://admin:secret@localhost:27017/auth_db?authSource=admin";
+// URL VAR FOR PROD (Container network / VPS)
+// const MONGO_URI = "mongodb://admin:secret@vibegrid_mongo:27017/auth_db?authSource=admin";
+
 async function cleanMongo() {
   const uri = process.env.MONGO_URI;
   if (!uri) {
@@ -39,16 +44,14 @@ async function cleanMongo() {
       console.log(`   ✅ Auth Users         — deleted ${result.deletedCount} row(s)`);
       console.log('\n🔥 Full wipe complete. ALL users deleted, including Admins.');
     } else {
-      const adminEmail = process.env.ADMIN_EMAIL || 'admin@vibegrid.manakhly.tech';
-      const devEmail = process.env.DEV_USER_EMAIL || 'dev@vibegrid.manakhly.tech';
-      // Also preserve the old local one just in case
-      const oldAdmin = 'admin@vibegrid.local';
+      const adminEmail = process.env.ADMIN_EMAIL;
+      const devEmail = process.env.DEV_USER_EMAIL;
 
       result = await collection.deleteMany({
-        email: { $nin: [adminEmail, devEmail, oldAdmin] }
+        email: { $nin: [adminEmail, devEmail].filter(Boolean) }
       });
       console.log(`   ✅ Auth Users         — deleted ${result.deletedCount} row(s)`);
-      console.log(`\n🔥 Full wipe complete. Preserved: ${adminEmail}, ${devEmail}`);
+      console.log(`\n🔥 Full wipe complete. Preserved: ${adminEmail || 'none'}, ${devEmail || 'none'}`);
     }
   } catch (err) {
     console.error('❌ Error cleaning Mongo:', err);

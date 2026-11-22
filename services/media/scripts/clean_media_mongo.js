@@ -16,6 +16,11 @@ for (const envPath of candidateEnvPaths) {
 
 const { MongoClient } = require('mongodb');
 
+// URL VAR FOR LOCAL (Host native / localhost)
+// const MONGO_URI = "mongodb://admin:secret@localhost:27017/media_db?authSource=admin";
+// URL VAR FOR PROD (Container network / VPS)
+// const MONGO_URI = "mongodb://admin:secret@vibegrid_mongo:27017/media_db?authSource=admin";
+
 async function cleanMediaMongo() {
   const uri = process.env.MONGO_URI;
   if (!uri) {
