@@ -15,28 +15,36 @@ for (const envPath of candidateEnvPaths) {
   }
 }
 
-const { MongoClient } = require('mongodb');
+const mongoose = require('mongoose');
 
 const includeAdmins = process.argv.includes('--include-admins');
 
-// URL VAR FOR LOCAL (Host native / localhost)
-// const MONGO_URI = "mongodb://admin:secret@localhost:27017/auth_db?authSource=admin";
-// URL VAR FOR PROD (Container network / VPS)
-// const MONGO_URI = "mongodb://admin:secret@vibegrid_mongo:27017/auth_db?authSource=admin";
-
 async function cleanMongo() {
-  const uri = process.env.MONGO_URI;
+  let uri = process.env.MONGO_URI;
   if (!uri) {
     console.error('❌ MONGO_URI not found in .env');
     process.exit(1);
   }
 
-  const client = new MongoClient(uri);
+  // Format URI with URL-encoded credentials if needed
   try {
-    await client.connect();
+    if (uri.includes('@') && uri.startsWith('mongodb://')) {
+      const parts = uri.replace('mongodb://', '').split('@');
+      const creds = parts[0].split(':');
+      if (creds.length === 2) {
+        const user = encodeURIComponent(decodeURIComponent(creds[0]));
+        const pass = encodeURIComponent(decodeURIComponent(creds[1]));
+        uri = `mongodb://${user}:${pass}@${parts[1]}`;
+      }
+    }
+  } catch (e) {
+    // Fallback
+  }
+
+  try {
+    await mongoose.connect(uri);
     console.log('\n🔥 FULL MONGO WIPE — starting...');
-    const db = client.db();
-    const collection = db.collection('userauths'); // Mongoose defaults to lowercase + 's'
+    const collection = mongoose.connection.collection('userauths');
 
     let result;
     if (includeAdmins) {
@@ -54,9 +62,9 @@ async function cleanMongo() {
       console.log(`\n🔥 Full wipe complete. Preserved: ${adminEmail || 'none'}, ${devEmail || 'none'}`);
     }
   } catch (err) {
-    console.error('❌ Error cleaning Mongo:', err);
+    console.error('❌ Error cleaning Mongo:', err.message || err);
   } finally {
-    await client.close();
+    await mongoose.disconnect();
   }
 }
 

@@ -14,26 +14,34 @@ for (const envPath of candidateEnvPaths) {
   }
 }
 
-const { MongoClient } = require('mongodb');
-
-// URL VAR FOR LOCAL (Host native / localhost)
-// const MONGO_URI = "mongodb://admin:secret@localhost:27017/media_db?authSource=admin";
-// URL VAR FOR PROD (Container network / VPS)
-// const MONGO_URI = "mongodb://admin:secret@vibegrid_mongo:27017/media_db?authSource=admin";
+const mongoose = require('mongoose');
 
 async function cleanMediaMongo() {
-  const uri = process.env.MONGO_URI;
+  let uri = process.env.MONGO_URI;
   if (!uri) {
     console.error('❌ MONGO_URI not found in .env');
     process.exit(1);
   }
-  const client = new MongoClient(uri);
+
+  // Format URI with URL-encoded credentials if needed
+  try {
+    if (uri.includes('@') && uri.startsWith('mongodb://')) {
+      const parts = uri.replace('mongodb://', '').split('@');
+      const creds = parts[0].split(':');
+      if (creds.length === 2) {
+        const user = encodeURIComponent(decodeURIComponent(creds[0]));
+        const pass = encodeURIComponent(decodeURIComponent(creds[1]));
+        uri = `mongodb://${user}:${pass}@${parts[1]}`;
+      }
+    }
+  } catch (e) {
+    // Fallback
+  }
 
   try {
-    await client.connect();
+    await mongoose.connect(uri);
     console.log('\n🧹 MEDIA MONGO WIPE — starting...');
-    const db = client.db('media_db');
-    const collection = db.collection('mediaassets');
+    const collection = mongoose.connection.collection('mediaassets');
 
     const result = await collection.deleteMany({});
     console.log(`   ✅ Media Assets Metadata — deleted ${result.deletedCount} document(s)`);
@@ -41,7 +49,7 @@ async function cleanMediaMongo() {
   } catch (err) {
     console.error('❌ Error cleaning Media Mongo:', err.message);
   } finally {
-    await client.close();
+    await mongoose.disconnect();
   }
 }
 
