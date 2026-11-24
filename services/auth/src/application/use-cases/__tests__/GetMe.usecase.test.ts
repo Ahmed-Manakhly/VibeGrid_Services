@@ -41,3 +41,4 @@ describe('GetMeUseCase', () => {
     expect(mockUserAuthRepo.findById).toHaveBeenCalledWith('non_existent');
   });
 });
+
